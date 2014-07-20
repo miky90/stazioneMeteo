@@ -33,7 +33,7 @@
 // }
 
 void storeData () {
-  storico.saveCurrent(0, 0, currPress);
+  storico.saveCurrent(currTemp, currHum, currPress);
   Serial.print(currPress);
   Serial.print(storico.getPress());
 }

@@ -41,12 +41,24 @@ void printMain() {
   myGLCD.setFont(SmallFont);
   myGLCD.setColor(0, 0, 0); //Bianco
   myGLCD.setBackColor(255,255,255);
-  myGLCD.print("     1017hPa                 1019hPa    ", CENTER, 141);
+  if(storico.getPress(-1)!=0)
+    myGLCD.printNumI(storico.getPress(-1), 40, 141);
+  else
+    myGLCD.print("----", 40, 141);
+  myGLCD.print("hPa", 72, 141);
   
+  //previson +1
+  myGLCD.print("----hPa    ", 232, 141);
+  
+    
   //9riga - umidità
   myGLCD.setFont(BigFont);
   myGLCD.setColor(0, 0, 0);
-  myGLCD.print("   78%", LEFT, 161);
+  if(storico.getHum(-1)!=0)
+    myGLCD.printNumI(storico.getHum(-1),48,161);
+  else
+    myGLCD.print("--",48,161);
+  myGLCD.print("%", 80, 161);
   
   // previsione +3h
   myGLCD.setColor(255, 255, 255);
@@ -55,13 +67,17 @@ void printMain() {
   myGLCD.setFont(SmallFont);
   myGLCD.setBackColor(255,255,255);
   myGLCD.setColor(0, 0, 0);
-  myGLCD.print("1021hPa", 232, 183);
+  myGLCD.print("----hPa", 232, 183);
  
   //10riga - gradi
   myGLCD.setFont(BigFont);
   myGLCD.setColor(0, 0, 0); //Bianco
   myGLCD.setBackColor(255, 255, 255);
-  myGLCD.print("   19'", LEFT, 181);
+  if(storico.getTemp(-1)!=0)
+    myGLCD.printNumF( storico.getTemp(-1),1,32 , 181); 
+  else
+    myGLCD.print("--.-",32 , 181); 
+  myGLCD.print("'", 96, 181);
   //FINE DATI
  
   //primo recttangolo
