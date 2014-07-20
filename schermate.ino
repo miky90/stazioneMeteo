@@ -266,14 +266,14 @@ void grafico () {
   
   //rettangolo grafico
   myGLCD.setColor(0,0,0);
-  myGLCD.drawRect(48, 24, 270, 192);
+  myGLCD.drawRect(48, 24, 272, 192);
   
   //8 riga - pressione
   myGLCD.setFont(SmallFont);
   myGLCD.setColor(255, 255, 255); //Bianco
   myGLCD.setBackColor(0,0,0);
 //myGLCD.print("1234567890123456789012345678901234567890"
-  myGLCD.print("      -24 -12  -6  -3  -1  ora +1      ", CENTER, 202);
+  myGLCD.print("      -24 -12  -6  -3  -1 ora  +1      ", CENTER, 202);
   //righe griglia
   myGLCD.setColor(0, 0, 0);
   myGLCD.drawLine(80, 24, 80, 192);
@@ -283,36 +283,44 @@ void grafico () {
   myGLCD.drawLine(208, 24, 208, 192);
   myGLCD.drawLine(240, 24, 240, 192);
   
-//rettangolini, altezza6 largh 29
-  //-24
-  myGLCD.setColor(50,50,50);
-  myGLCD.fillRect(50, 152, 78, 158);//1001
-  myGLCD.fillRect(50, 160, 78, 166);//1002
-  myGLCD.fillRect(50, 168, 78, 174);//1003
-  myGLCD.fillRect(50, 176, 78, 182);//1004
-  myGLCD.fillRect(50, 184, 78, 190);//1005 
-  //-12
-  myGLCD.setColor(50,50,50);
-  myGLCD.fillRect(82, 152, 110, 158);//1001
-  myGLCD.fillRect(82, 160, 110, 166);//1002
-  myGLCD.fillRect(82, 168, 110, 174);//1003
-  myGLCD.fillRect(82, 176, 110, 182);//1004
-  myGLCD.fillRect(82, 184, 110, 190);//1005
-  //-6
-  myGLCD.setColor(50,50,50);
-  myGLCD.fillRect(114, 184, 142, 190);//1001
-  //-3
-  myGLCD.setColor(50,50,50);
-  myGLCD.fillRect(146, 184, 174, 190);//1001
-  //-1
-  myGLCD.setColor(50,50,50);
-  myGLCD.fillRect(178, 184, 206, 190);//1001
-  //ora
-  myGLCD.setColor(50,50,50);
-  myGLCD.fillRect(210, 184, 238, 190);//1001
-  //+1
-  myGLCD.setColor(50,50,50);
-  myGLCD.fillRect(242, 184, 268, 190);//1001
+  drawPressBar(-24,storico.getPress(-24));
+  drawPressBar(-12,storico.getPress(-12));
+  drawPressBar(-6,storico.getPress(-6));
+  drawPressBar(-3,storico.getPress(-3));
+  drawPressBar(-1,storico.getPress(-1));
+  drawPressBar(0,storico.getPress(0));
+  drawPressBar(1,0);
+  
+////rettangolini, altezza6 largh 29
+//  //-24
+//  myGLCD.setColor(50,50,50);
+//  myGLCD.fillRect(50, 152, 78, 158);//1001
+//  myGLCD.fillRect(50, 160, 78, 166);//1002
+//  myGLCD.fillRect(50, 168, 78, 174);//1003
+//  myGLCD.fillRect(50, 176, 78, 182);//1004
+//  myGLCD.fillRect(50, 184, 78, 190);//1005 
+//  //-12
+//  myGLCD.setColor(50,50,50);
+//  myGLCD.fillRect(82, 152, 110, 158);//1001
+//  myGLCD.fillRect(82, 160, 110, 166);//1002
+//  myGLCD.fillRect(82, 168, 110, 174);//1003
+//  myGLCD.fillRect(82, 176, 110, 182);//1004
+//  myGLCD.fillRect(82, 184, 110, 190);//1005
+//  //-6
+//  myGLCD.setColor(50,50,50);
+//  myGLCD.fillRect(114, 184, 142, 190);//1001
+//  //-3
+//  myGLCD.setColor(50,50,50);
+//  myGLCD.fillRect(146, 184, 174, 190);//1001
+//  //-1
+//  myGLCD.setColor(50,50,50);
+//  myGLCD.fillRect(178, 184, 206, 190);//1001
+//  //ora
+//  myGLCD.setColor(50,50,50);
+//  myGLCD.fillRect(210, 184, 238, 190);//1001
+//  //+1
+//  myGLCD.setColor(50,50,50);
+//  myGLCD.fillRect(242, 184, 268, 190);//1001
   //1020hpa grafico
   myGLCD.setColor(0, 0, 0); //Nero
   myGLCD.setBackColor(255,255,255);
@@ -335,4 +343,33 @@ void grafico () {
  
   printPulsanti(); 
   printDataOra(true);
+}
+
+void drawPressBar(int ora, int pressione) {
+    int x = 50;
+    int y = 190;
+    int colonna;
+    switch (ora) {
+      case -24: colonna = 0; break;
+      case -12: colonna = 1; break;
+      case -6: colonna = 2; break;
+      case -3: colonna = 3; break;
+      case -1: colonna = 4; break;
+      case 0: colonna = 5; break;
+      case 1: colonna = 6; break;
+      //default: colonna = 10; break;
+    }
+    x = 50 + 32*colonna;
+    if(pressione>1000) {
+      if(pressione>1020)
+        pressione=1020;
+      int altezza = pressione - 1000;
+      myGLCD.setColor(150,150,150);
+      int k=0;
+      for(int i=0; i<altezza; i++) {
+        if((i%5==0) & (i!=0))
+          y-=2;
+        myGLCD.fillRect(x, y-(8*i), x+28, y-(8*i)-6);//1001
+      }
+    }
 }

@@ -25,7 +25,7 @@ void showDOW(byte dow)
   char* str[] = {"MON","TUE","WED","THU","FRI","SAT","SUN"};
   
   myGLCD.setColor(128, 128, 255);
-  myGLCD.setBackColor(0, 0, 0);
+  myGLCD.setBackColor(255, 255, 255);
   myGLCD.print(str[dow-1], 26, 167);
 }
 
@@ -131,6 +131,9 @@ void setClock()
   myGLCD.clrScr();
   myGLCD.setFont(BigFont);
   
+  myGLCD.fillRect(0, 0, 319, 239);
+  myGLCD.setColor(255, 255, 255); //Bianco
+  
   // Draw Save button
   myGLCD.setColor(64, 64, 128);
   myGLCD.fillRoundRect(165, 200, 319, 239);
@@ -138,7 +141,7 @@ void setClock()
   myGLCD.drawRoundRect(165, 200, 319, 239);
   myGLCD.setBackColor(64, 64, 128);
   myGLCD.print("Save", 210, 212);
-  myGLCD.setBackColor(0, 0, 0);
+  myGLCD.setBackColor(255, 255, 255);
   // Draw Cancel button
   myGLCD.setColor(64, 64, 128);
   myGLCD.fillRoundRect(0, 200, 154, 239);
@@ -146,7 +149,7 @@ void setClock()
   myGLCD.drawRoundRect(0, 200, 154, 239);
   myGLCD.setBackColor(64, 64, 128);
   myGLCD.print("Cancel", 29, 212);
-  myGLCD.setBackColor(0, 0, 0);
+  myGLCD.setBackColor(255, 255, 255);
   
   // Draw frames
   myGLCD.setColor(0, 0, 255);

@@ -1,7 +1,41 @@
-void saveToSd() {
- //if(t.minute%5) {
-   //salvo su SD
- //}
+// void saveToSd() {
+ // if(sdAviable) {
+   // res=file.openFile("BIGFILE.TXT", FILEMODE_TEXT_WRITE);
+    // if (res==NO_ERROR)
+    // {
+      // String stringa = rtc.getTimeStr();
+      // stringa += "t:";
+      // stringa += currStrTemp;
+      // stringa += "h:";
+      // stringa += currStrHum;
+      // stringa += "p:";
+      // stringa += currPress;
+      // char * buf;
+      // stringa.toCharArray(buf,stringa.length());
+      // file.writeLn(buf);
+      // file.closeFile();
+    // }
+    // else
+    // {
+      // switch(res)
+      // {
+        // case ERROR_ANOTHER_FILE_OPEN:
+          // Serial.println("** ERROR: Another file is already open...");
+          // break;
+        // default:
+          // Serial.print("** ERROR: ");
+          // Serial.println(res, HEX);
+          // break;
+      // }
+    // }
+  //Serial.println("***** All done... *****");
+  // }
+// }
+
+void storeData () {
+  storico.saveCurrent(0, 0, currPress);
+  Serial.print(currPress);
+  Serial.print(storico.getPress());
 }
 
 void recuperaDatiInterni() {
@@ -41,7 +75,7 @@ int getPressione(char* buff)
   else 
     return 0;
 }
-void getTemp(char* buff) 
+float getTemp(char* buff) 
 {
   if(buff[14]=='t' && buff[15]>='0' && buff[15]<='9') 
   {
@@ -150,3 +184,28 @@ void backlightOff()
 {
   digitalWrite(backlightPin,HIGH);
 }
+
+//char *verboseError(byte err)
+//{
+//	switch (err)
+//	{
+//	case ERROR_MBR_READ_ERROR:
+//		return "Error reading MBR";
+//		break;
+//	case ERROR_MBR_SIGNATURE:
+//		return "MBR Signature error";
+//		break;
+//	case ERROR_MBR_INVALID_FS:
+//		return "Unsupported filesystem";
+//		break;
+//	case ERROR_BOOTSEC_READ_ERROR:
+//		return "Error reading Boot Sector";
+//		break;
+//	case ERROR_BOOTSEC_SIGNATURE:
+//		return "Boot Sector Signature error";
+//		break;
+//	default:
+//		return "Unknown error";
+//		break;
+//	}
+//}

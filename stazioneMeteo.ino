@@ -26,6 +26,9 @@
 #include <DS1307.h>
 #include <RH_NRF24.h>
 #include "DHT.h"
+#include <StoricoDati.h>
+//#include <tinyFAT.h>
+//#include <avr/pgmspace.h>
 
 
 //Fonts
@@ -40,16 +43,16 @@ extern prog_uint16_t pioggiadebole[0x1FA4];
 extern prog_uint16_t settings[0x384];
 extern prog_uint16_t arrow[0x384];
 
-//variabili
-// set pin numbers:
+//VARIABILI
+//set pin numbers:
 const int buttonPin = 18;     // the number of the pushbutton pin /Interrupt 5
 const int backlightPin = 9;   // number of backlight tft pin
+const int wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4      
 
-int wakePinWifi = 19;          //Interrupt 4      
-volatile int wakeStatus = 0;             // variable to store a request for wakeUp
-                                          // 1 - wifi
-                                          // 2 - button
-
+//richiesta di wakeUp 
+volatile int wakeStatus = 0;  // variable to store a request for wakeUp
+                              // 1 - wifi
+                              // 2 - button
 //parametri interfaccia
 boolean buttonState = false;  //stato del pulsante true = premuto
 boolean lcdActive = true;     //diventa false dopo un minuto di inattività
@@ -68,30 +71,27 @@ float currHum = 0.0;          //umidita corrente letta dai sensori esterni
 char* currStrTemp="--.-";     //stringa temperatura corrente
 float currTemp = 0.0;         //temperatura corrente letta dai sensori esterni 
 
+StoricoDati storico; //Storico dati
+
 //dati meteo interni
 float currInHum=0.0;          //umidita corrente letta dal sensore interno 
 float currInTemp=0.0;         //temperatura corrente letta dal sensoro interno 
 
+//Variabili SD
+//int sdAviable = 0;            //sd disponibile
+//byte res;                     //byte di ritorno lettura e crittura su file
+
+// Variabili orologio
 boolean puntini = true;
+int oldMin=0;                 //ultimo minuto stampato 
+Time  t;                      // Init a Time-data structure
 
-//simulo orologio
-int oldMin=0;
-int milliSec=0;
-int secondi=0;
-int ora=14;
-int minuti=15;
-
-//costruttori
-UTFT myGLCD(TFT01_32,38,39,40,41); //Display TFT
-UTouch  myTouch(6,5,4,3,2);        //TouchScreen
-RH_NRF24 nrf24(8,49);              // Singleton instance of the radio driver
-DHT dht;
-
-// Init the DS1307
-DS1307 rtc(20, 21);
-
-// Init a Time-data structure
-Time  t;
+//COSTRUTTORI
+UTFT myGLCD(TFT01_32,38,39,40,41); 	//Display TFT
+UTouch  myTouch(6,5,4,3,2);        	//TouchScreen
+RH_NRF24 nrf24(8,49);              	//Singleton instance of the radio driver
+DHT dht;						   	//Sensore Temperatura
+DS1307 rtc(20, 21);					//Orologio
 
 void setup()
 {
@@ -105,16 +105,15 @@ void setup()
   
   attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
                                       // buttonPressed when pin 5 goes from low to high 
-  attachInterrupt(4, wakeUpNowWifi, LOW); // use interrupt 4 (pin 19) and run function
+  //attachInterrupt(4, wakeUpNowWifi, LOW); // use interrupt 4 (pin 19) and run function
                                       // wakeUpNow when pin 4 goes from low to high 
 
-  
-  
   //Setup the LCD
   myGLCD.InitLCD();
-  //myGLCD.setFont(BigFont);
+  myGLCD.setFont(BigFont);
   myGLCD.clrScr();
-  //myGLCD.print("METEO APP LOADING...", CENTER, 110);
+  backlightOn();    //Accendo retroilluminazione
+  myGLCD.print("METEO APP LOADING...", CENTER, 110);
   
   //inizializza comunicazione seriale
   Serial.begin(115200);
@@ -131,9 +130,21 @@ void setup()
   dht.setup(45);
   
   //Setup SD
-  //pinMode(53,OUTPUT);
-  //file.setSSpin(53);
-  //file.initFAT();
+  // pinMode(53,OUTPUT);
+  // file.setSSpin(53);
+  // file.initFAT(SPISPEED_LOW);
+  
+  // if (res!=NO_ERROR)
+  // {
+    // Serial.print("***** ERROR: ");
+    // Serial.println(verboseError(res));
+    //errore SD
+  // }
+  // else {
+    // if (!file.exists("DATA_LOG.TXT"))
+      // file.create("DATA_LOG.TXT");
+    // sdAviable=1;
+  // }
   
   //Setup NRF24 Wifi board
   if (!nrf24.init())
@@ -146,7 +157,6 @@ void setup()
   recuperaDatiInterni();
   
   printMain();      //paint schermata iniziale
-  backlightOn();    //Accendo retroilluminazione
 }
 
 void loop()
@@ -163,7 +173,7 @@ void loop()
           secAggWifi=0.0;
           recuperaDati();      //recupero dati
           recuperaDatiInterni(); 
-          saveToSd();
+          storeData();
           if(schermata==1)
               printMeteoAttuale();
         }
@@ -187,7 +197,7 @@ void loop()
             secAggWifi=0.0;
             recuperaDati();      //recupero dati
             recuperaDatiInterni(); 
-            saveToSd();
+            
             if(lcdActive & schermata==1)
               printMeteoAttuale();
           }
@@ -290,7 +300,7 @@ void sleepNow()         // here we put the arduino to sleep
     
     attachInterrupt(5, wakeUpNowButton, RISING); // use interrupt 5 (pin 18) and run function
                                       // wakeUpNow when pin 5 goes from low to high 
-    attachInterrupt(4, wakeUpNowWifi, LOW); // use interrupt 4 (pin 19) and run function
+    //attachInterrupt(4, wakeUpNowWifi, LOW); // use interrupt 4 (pin 19) and run function
                                       // wakeUpNow when pin 4 goes from low to high 
 
     sleep_mode();            // here the device is actually put to sleep!!
@@ -300,7 +310,7 @@ void sleepNow()         // here we put the arduino to sleep
     detachInterrupt(5);      // disables interrupt 5 on pin 18 so the 
                              // wakeUpNow code will not be executed 
                              // during normal running time.
-    detachInterrupt(4);      // disables interrupt 4 on pin 19 so the 
+    //detachInterrupt(4);      // disables interrupt 4 on pin 19 so the 
                              // wakeUpNow code will not be executed 
                              // during normal running time.
     attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
