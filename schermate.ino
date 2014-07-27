@@ -9,9 +9,10 @@ void printMain() {
   float umidita[2]; //0= -1h, 1= ora
   float gradi[2];  //0= -1h, 1= ora
   //recupero dati sensori
-  pressione[0]=1017; pressione[1]=currPress; pressione[2]=1019; pressione[3]=1021;
-  umidita[0]=63; umidita[1]=60;
-  gradi[0]=21; gradi[1]=23.3;  
+  pressione[0]=storico.getPress(-1); pressione[1]=storico.getPress();
+  pressione[2]=0; pressione[3]=0;
+  umidita[0]=storico.getHum(-1); umidita[1]=storico.getHum();
+  gradi[0]=storico.getTemp(-1); gradi[1]=storico.getTemp();  
  
   //LAYOUT
   myGLCD.setFont(BigFont);
@@ -41,8 +42,8 @@ void printMain() {
   myGLCD.setFont(SmallFont);
   myGLCD.setColor(0, 0, 0); //Bianco
   myGLCD.setBackColor(255,255,255);
-  if(storico.getPress(-1)!=0)
-    myGLCD.printNumI(storico.getPress(-1), 40, 141);
+  if(pressione[0]!=0)
+    myGLCD.printNumI(pressione[0], 40, 141);
   else
     myGLCD.print("----", 40, 141);
   myGLCD.print("hPa", 72, 141);
@@ -54,8 +55,8 @@ void printMain() {
   //9riga - umidità
   myGLCD.setFont(BigFont);
   myGLCD.setColor(0, 0, 0);
-  if(storico.getHum(-1)!=0)
-    myGLCD.printNumI(storico.getHum(-1),48,161);
+  if(pressione[0]!=0)
+    myGLCD.printNumI(umidita[0],48,161);
   else
     myGLCD.print("--",48,161);
   myGLCD.print("%", 80, 161);
@@ -73,8 +74,10 @@ void printMain() {
   myGLCD.setFont(BigFont);
   myGLCD.setColor(0, 0, 0); //Bianco
   myGLCD.setBackColor(255, 255, 255);
-  if(storico.getTemp(-1)!=0)
-    myGLCD.printNumF( storico.getTemp(-1),1,32 , 181); 
+  if(pressione[0]!=0){
+    Serial.println(gradi[0]);
+    myGLCD.printNumF(gradi[0],1,32 , 181); 
+  }
   else
     myGLCD.print("--.-",32 , 181); 
   myGLCD.print("'", 96, 181);

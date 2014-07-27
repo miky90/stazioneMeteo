@@ -34,8 +34,6 @@
 
 void storeData () {
   storico.saveCurrent(currTemp, currHum, currPress);
-  Serial.print(currPress);
-  Serial.print(storico.getPress());
 }
 
 void recuperaDatiInterni() {
@@ -56,8 +54,8 @@ void recuperaDati() {
   if (nrf24.recv(buf, &len)) {
     bufferWifi=(char*)buf;
     currPress=sealevel(getPressione(bufferWifi),altitudine);
-    getTemp(bufferWifi);
-    getHum(bufferWifi);
+    currTemp=getTemp(bufferWifi);
+    currHum=getHum(bufferWifi);
     nrf24.setModeIdle();   //Moallità risparmio energetico wifi
   }
 }
@@ -82,20 +80,26 @@ float getTemp(char* buff)
     for(int i=15;i<19;i++)
       currStrTemp[i-15]=buff[i];
     currStrTemp[4]='\0';
+    return atof(currStrTemp);
   }
-  else 
+  else {
     currStrTemp= "--.-";
+    return 0.0;
+  }
 }
-void getHum(char* buff) 
+float getHum(char* buff) 
 {
   if(buff[8]=='u'&& buff[9]>='0' && buff[9]<='9') 
   {
     for(int i=9;i<11;i++)
       currStrHum[i-9]=buff[i];
     currStrHum[2]='\0';
+    return atof(currStrHum);
   }
-  else 
+  else {
     currStrHum = "--";
+    return 0.0;
+  }
 }
 
 double sealevel(double P, double A)

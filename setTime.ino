@@ -2,7 +2,7 @@ void drawUpButton(int x, int y)
 {
   myGLCD.setColor(64, 64, 128);
   myGLCD.fillRoundRect(x, y, x+32, y+25);
-  myGLCD.setColor(255, 255, 255);
+  myGLCD.setColor(128, 128, 255);
   myGLCD.drawRoundRect(x, y, x+32, y+25);
   myGLCD.setColor(128, 128, 255);
   for (int i=0; i<15; i++)
@@ -13,7 +13,7 @@ void drawDownButton(int x, int y)
 {
   myGLCD.setColor(64, 64, 128);
   myGLCD.fillRoundRect(x, y, x+32, y+25);
-  myGLCD.setColor(255, 255, 255);
+  myGLCD.setColor(128, 128, 255);
   myGLCD.drawRoundRect(x, y, x+32, y+25);
   myGLCD.setColor(128, 128, 255);
   for (int i=0; i<15; i++)
@@ -131,22 +131,24 @@ void setClock()
   myGLCD.clrScr();
   myGLCD.setFont(BigFont);
   
-  myGLCD.fillRect(0, 0, 319, 239);
   myGLCD.setColor(255, 255, 255); //Bianco
+  myGLCD.fillRect(0, 0, 319, 239);
   
   // Draw Save button
   myGLCD.setColor(64, 64, 128);
   myGLCD.fillRoundRect(165, 200, 319, 239);
-  myGLCD.setColor(255, 255, 255);
+  myGLCD.setColor(128, 128, 255);
   myGLCD.drawRoundRect(165, 200, 319, 239);
+  myGLCD.setColor(255, 255, 255);
   myGLCD.setBackColor(64, 64, 128);
   myGLCD.print("Save", 210, 212);
   myGLCD.setBackColor(255, 255, 255);
   // Draw Cancel button
   myGLCD.setColor(64, 64, 128);
   myGLCD.fillRoundRect(0, 200, 154, 239);
-  myGLCD.setColor(255, 255, 255);
+  myGLCD.setColor(128, 128, 255);
   myGLCD.drawRoundRect(0, 200, 154, 239);
+  myGLCD.setColor(255, 255, 255);
   myGLCD.setBackColor(64, 64, 128);
   myGLCD.print("Cancel", 29, 212);
   myGLCD.setBackColor(255, 255, 255);
@@ -177,7 +179,7 @@ void setClock()
   drawDownButton(234, 161);
   
   // Print current time and date
-  myGLCD.setColor(255, 255, 255);
+  myGLCD.setColor(0, 0, 0);
   t_temp = rtc.getTime();
   if (t_temp.date==0)
   {
@@ -270,7 +272,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -295,7 +297,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -320,7 +322,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -348,7 +350,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -373,7 +375,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -398,7 +400,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -425,7 +427,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -451,7 +453,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -469,7 +471,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -498,7 +500,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -524,7 +526,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -542,7 +544,7 @@ void setClock()
             myGLCD.setColor(64, 64, 128);
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
-            myGLCD.setColor(255, 255, 255);
+            myGLCD.setColor(0, 0, 0);
             myGLCD.setFont(BigFont);
           }
         }
@@ -595,7 +597,7 @@ void buttonWait(int x, int y)
   myGLCD.setColor(255, 0, 0);
   myGLCD.drawRoundRect(x, y, x+32, y+25);
   waitForTouchRelease();
-  myGLCD.setColor(255, 255, 255);
+  myGLCD.setColor(0, 0, 0);
   myGLCD.drawRoundRect(x, y, x+32, y+25);
 }
 
