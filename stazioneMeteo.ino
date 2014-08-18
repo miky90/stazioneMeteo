@@ -20,6 +20,7 @@
 //                 GND----------GND   (ground in)
 //
 #include <avr/sleep.h>
+#include <EEPROM.h>
 #include <UTFT.h>
 #include <UTouch.h>
 #include <SPI.h>
@@ -49,6 +50,9 @@ const int buttonPin = 18;     // the number of the pushbutton pin /Interrupt 5
 const int backlightPin = 9;   // number of backlight tft pin
 const int wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4      
 
+//Indirizzi EEPROM
+//0,1 altitudine  
+
 //richiesta di wakeUp 
 volatile int wakeStatus = 0;  // variable to store a request for wakeUp
                               // 1 - wifi
@@ -64,7 +68,8 @@ int schermata = 1;            /*! 1 - Schermata principale
 //dati meteo esterni
 float secAggWifi = 0.0;       //secondi dall'ultimo aggiornamento dei dati meteo esterni
 boolean firstConnection=true; //prima connessione con stazione esterna
-double altitudine=30.0;       // altitudine manuale
+boolean errorConnection=false; //errore nella connessione della stazione esterna
+double altitudine;
 int currPress=0;              //pressione corrente letta dai sensori esterni 
 char* currStrHum="--";        //stringa umidità corrente  
 float currHum = 0.0;          //umidita corrente letta dai sensori esterni 
@@ -105,7 +110,7 @@ void setup()
   
   attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
                                       // buttonPressed when pin 5 goes from low to high 
-  //attachInterrupt(4, wakeUpNowWifi, LOW); // use interrupt 4 (pin 19) and run function
+  attachInterrupt(4, wakeUpNowWifi, FALLING); // use interrupt 4 (pin 19) and run function
                                       // wakeUpNow when pin 4 goes from low to high 
 
   //Setup the LCD
@@ -113,7 +118,10 @@ void setup()
   myGLCD.setFont(BigFont);
   myGLCD.clrScr();
   backlightOn();    //Accendo retroilluminazione
-  myGLCD.print("METEO APP LOADING...", CENTER, 110);
+  myGLCD.print("LOADING...", CENTER, 110);
+  
+  altitudine=readAltitude();
+  //altitudine=30;
   
   //inizializza comunicazione seriale
   Serial.begin(115200);
@@ -180,9 +188,12 @@ void loop()
       }
       else 
       {
+        recuperaDatiInterni();
+        errorConnection=true;
+        myGLCD.setFont(SmallFont);
+        myGLCD.setColor(0, 0, 0); 
         myGLCD.setColor(255, 165, 0); //Arancione
-        myGLCD.setBackColor(64, 64, 64); //Grigiet sotto
-        myGLCD.print("Errore Connesione!!", CENTER, 110);
+        myGLCD.print("Conn. Failed", 230, 3);
       }
     }
     else 
@@ -205,9 +216,13 @@ void loop()
       }
       else 
       {
+        errorConnection=true;
+        firstConnection=true;
+        recuperaDatiInterni();
+        myGLCD.setFont(SmallFont);
+        myGLCD.setColor(0, 0, 0); 
         myGLCD.setColor(255, 165, 0); //Arancione
-        myGLCD.setBackColor(64, 64, 64); //Grigiet sotto
-        myGLCD.print("Errore Connesione!!", CENTER, 110);
+        myGLCD.print("Conn. Failed", 230, 3);
       }
     }
     
@@ -300,7 +315,7 @@ void sleepNow()         // here we put the arduino to sleep
     
     attachInterrupt(5, wakeUpNowButton, RISING); // use interrupt 5 (pin 18) and run function
                                       // wakeUpNow when pin 5 goes from low to high 
-    //attachInterrupt(4, wakeUpNowWifi, LOW); // use interrupt 4 (pin 19) and run function
+    attachInterrupt(4, wakeUpNowWifi, FALLING); // use interrupt 4 (pin 19) and run function
                                       // wakeUpNow when pin 4 goes from low to high 
 
     sleep_mode();            // here the device is actually put to sleep!!
@@ -310,26 +325,30 @@ void sleepNow()         // here we put the arduino to sleep
     detachInterrupt(5);      // disables interrupt 5 on pin 18 so the 
                              // wakeUpNow code will not be executed 
                              // during normal running time.
-    //detachInterrupt(4);      // disables interrupt 4 on pin 19 so the 
+    detachInterrupt(4);      // disables interrupt 4 on pin 19 so the 
                              // wakeUpNow code will not be executed 
                              // during normal running time.
     attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
                                       // buttonPressed when pin 5 goes from low to high 
+    attachInterrupt(4, wakeUpNowWifi, FALLING); // use interrupt 4 (pin 19) and run function
+                                      // wakeUpNow when pin 4 goes from low to high 
 }
 
 void buttonPressed() {
   wakeStatus=0;
-  if(lcdActive)   
+  if(lcdActive){
+    if(schermata!=1) 
       { inattivita=0;
         printMain();
       }
+  }
   else
-      {
+  {
         inattivita=0;
         myGLCD.lcdOn();
         lcdActive=true;
-        printMain();
         backlightOn();
-      }
-  delay(100);
+        printMain();  
+  }
 }
+

@@ -128,7 +128,7 @@ void setClock()
   
   waitForTouchRelease();    
   
-  myGLCD.clrScr();
+  //myGLCD.clrScr();
   myGLCD.setFont(BigFont);
   
   myGLCD.setColor(255, 255, 255); //Bianco

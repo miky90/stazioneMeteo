@@ -154,7 +154,7 @@ void touchInterface()
       {
         myGLCD.setColor(255, 165, 0);
         myGLCD.drawRect(280, 132, 310, 162);
-        //printSettings();
+        setPressione();
       }
       break;
     case 3:
@@ -178,6 +178,20 @@ void touchInterface()
   }
   else
     inattivita++;
+}
+
+void saveAltitude(int alt) {
+  int miglCent = (int)(alt/100);
+  EEPROM.write(0, miglCent);
+  EEPROM.write(1, (alt-(miglCent*100)));
+  altitudine=alt;
+}
+
+
+int readAltitude() {
+  int alt = EEPROM.read(0);
+  alt += EEPROM.read(1)*100;
+  return alt;
 }
 
 void backlightOn() 

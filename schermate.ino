@@ -347,15 +347,15 @@ void grafico () {
   //1015hpa gr
   myGLCD.setColor(0, 0, 0); //Bianco
   myGLCD.print("  1015", LEFT, 62);
-  myGLCD.drawLine(49, 66, 269, 66);
+  myGLCD.drawLine(49, 66, 271, 66);
   //1010hpa grafico
   myGLCD.setColor(0, 0, 0); //Bianco
   myGLCD.print("  1010", LEFT, 104);
-  myGLCD.drawLine(49, 108, 269, 108);
+  myGLCD.drawLine(49, 108, 271, 108);
   //1005hpa gr
   myGLCD.setColor(0, 0, 0); //Bianco
   myGLCD.print("  1005", LEFT, 146);
-  myGLCD.drawLine(49, 150, 269, 150);
+  myGLCD.drawLine(49, 150, 271, 150);
   //1000hpa grafico
   myGLCD.setColor(0, 0, 0); //Bianco
   myGLCD.print("  1000", LEFT, 185);
