@@ -48,7 +48,9 @@ extern prog_uint16_t arrow[0x384];
 //set pin numbers:
 const int buttonPin = 18;     // the number of the pushbutton pin /Interrupt 5
 const int backlightPin = 9;   // number of backlight tft pin
-const int wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4      
+const int wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4    
+
+volatile boolean dataAviable = false;
 
 //Indirizzi EEPROM
 //0,1 altitudine  
@@ -90,6 +92,7 @@ float currInTemp=0.0;         //temperatura corrente letta dal sensoro interno
 boolean puntini = true;
 int oldMin=0;                 //ultimo minuto stampato 
 Time  t;                      // Init a Time-data structure
+Time oldDataSaved;
 
 //COSTRUTTORI
 UTFT myGLCD(TFT01_32,38,39,40,41); 	//Display TFT
@@ -110,7 +113,7 @@ void setup()
   
   attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
                                       // buttonPressed when pin 5 goes from low to high 
-  attachInterrupt(4, wakeUpNowWifi, FALLING); // use interrupt 4 (pin 19) and run function
+  attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
                                       // wakeUpNow when pin 4 goes from low to high 
 
   //Setup the LCD
@@ -163,90 +166,110 @@ void setup()
   if (!nrf24.setRF(RH_NRF24::DataRate250kbps, RH_NRF24::TransmitPower0dBm))
     Serial.println("setRF failed");   
   recuperaDatiInterni();
-  
+  aggiornaDati();
   printMain();      //paint schermata iniziale
 }
 
 void loop()
 {
-  while(true) 
+  if(wakeStatus==0) 
   {
-    if(firstConnection) 
+    while(true) 
     {
-      if(secAggWifi<305)
-      {
-        secAggWifi+=0.001;
-        if (nrf24.available()) 
-        {
-          secAggWifi=0.0;
-          recuperaDati();      //recupero dati
-          recuperaDatiInterni(); 
-          storeData();
-          if(schermata==1)
-              printMeteoAttuale();
-        }
-      }
-      else 
-      {
-        recuperaDatiInterni();
-        errorConnection=true;
-        myGLCD.setFont(SmallFont);
-        myGLCD.setColor(0, 0, 0); 
-        myGLCD.setColor(255, 165, 0); //Arancione
-        myGLCD.print("Conn. Failed", 230, 3);
-      }
-    }
-    else 
-    {
-      if(secAggWifi<305)
-      {
-        secAggWifi+=0.001;
-        if(secAggWifi>295)
-        {
-          if (nrf24.available()) 
-          {
-            secAggWifi=0.0;
-            recuperaDati();      //recupero dati
-            recuperaDatiInterni(); 
-            
-            if(lcdActive & schermata==1)
-              printMeteoAttuale();
-          }
-        }
-      }
-      else 
-      {
-        errorConnection=true;
-        firstConnection=true;
-        recuperaDatiInterni();
-        myGLCD.setFont(SmallFont);
-        myGLCD.setColor(0, 0, 0); 
-        myGLCD.setColor(255, 165, 0); //Arancione
-        myGLCD.print("Conn. Failed", 230, 3);
-      }
-    }
-    
-    //buttonState = digitalRead(buttonPin);    // read the state of the pushbutton value
-    if (wakeStatus == 2)
-    {
-      buttonPressed();
-    }
-    if(lcdActive) {
-      checkDataOra();
-      touchInterface();                    //eseguo interfaccia touch
-      if(inattivita==5000&schermata!=1)    //dopo 3000 di inattivita se sono su una schermata diversa dalla principale
-        printMain();
-      else if(inattivita==8000)              //dopo 5000 di inattivita
-      {
-        backlightOff();                    //spengo retroilluminazione 
-        myGLCD.lcdOff();                   //metto in stand-By lo schermo
-        lcdActive=false;
+      if(wakeStatus==1) {
+        wakeStatus=0;
+        aggiornaDati();
+        //Serial.println("intterupt wifi");
+        //delay(100);
         sleepNow();
       }
-      delay(10);
+      if(wakeStatus==2) {
+        Serial.println("intterupt wifi");
+        wakeStatus=0;
+        buttonPressed();
+      }
+//      if(firstConnection) 
+//      {
+//        if(secAggWifi<305)
+//        {
+//          secAggWifi+=0.01;
+//          if (nrf24.available()) 
+//          {
+//            secAggWifi=0.0;
+//            recuperaDati();      //recupero dati
+//            recuperaDatiInterni(); 
+//            storeData();
+//            firstConnection=false;
+//            if(schermata==1)
+//                printMeteoAttuale();
+//          }
+//        }
+//        else 
+//        {
+//          recuperaDatiInterni();
+//          printError(0);
+//        }
+//      }
+//      else 
+//      {
+//        if(secAggWifi<305)
+//        {
+//          secAggWifi+=0.01;
+//          if(secAggWifi>295)
+//          {
+//            if (nrf24.available()) 
+//            {
+//              secAggWifi=0.0;
+//              recuperaDati();      //recupero dati
+//              recuperaDatiInterni(); 
+//              
+//              if(lcdActive & schermata==1)
+//                printMeteoAttuale();
+//            }
+//          }
+//        }
+//        else 
+//        {
+//          errorConnection=true;
+//          firstConnection=true;
+//          recuperaDatiInterni();
+//          printError(0);
+//        }
+//      }
+      
+      if(lcdActive) {
+        if(dataAviable) {
+          dataAviable=false;
+          aggiornaDati();
+        }
+        checkDataOra();
+        touchInterface();                    //eseguo interfaccia touch
+        if(inattivita==5000&schermata!=1)    //dopo 3000 di inattivita se sono su una schermata diversa dalla principale
+          printMain();
+        else if(inattivita==8000)              //dopo 5000 di inattivita
+        {
+          backlightOff();                    //spengo retroilluminazione 
+          myGLCD.lcdOff();                   //metto in stand-By lo schermo
+          lcdActive=false;
+          sleepNow();
+        }
+        delay(10);
+      }
+      else 
+        delay(100);
     }
-    else 
-      delay(100);
+  }
+  else if(wakeStatus==1) {
+    wakeStatus=0;
+    aggiornaDati();
+    //Serial.println("intterupt wifi");
+    //delay(100);
+    sleepNow();
+  }
+  else if(wakeStatus==2) {
+    Serial.println("intterupt wifi");
+    wakeStatus=0;
+    buttonPressed();
   }
 }
 
@@ -261,6 +284,11 @@ void wakeUpNowWifi()        // here the interrupt is handled after wakeup
 void wakeUpNowButton()        // here the interrupt is handled after wakeup
 {
   wakeStatus = 2;
+  //buttonState = digitalRead(buttonPin);    // read the state of the pushbutton value
+    //if (wakeStatus == 2)
+    //{
+  
+    //}
   // execute code here after wake-up before returning to the loop() function
   // timers and code using timers (serial.print and more...) will not work here.
   // we don't really need to execute any special functions here, since we
@@ -315,9 +343,9 @@ void sleepNow()         // here we put the arduino to sleep
     
     attachInterrupt(5, wakeUpNowButton, RISING); // use interrupt 5 (pin 18) and run function
                                       // wakeUpNow when pin 5 goes from low to high 
-    attachInterrupt(4, wakeUpNowWifi, FALLING); // use interrupt 4 (pin 19) and run function
+    attachInterrupt(4, wakeUpNowWifi, RISING); // use interrupt 4 (pin 19) and run function
                                       // wakeUpNow when pin 4 goes from low to high 
-
+    
     sleep_mode();            // here the device is actually put to sleep!!
                              // THE PROGRAM CONTINUES FROM HERE AFTER WAKING UP
     sleep_disable();         // first thing after waking from sleep:
@@ -330,12 +358,15 @@ void sleepNow()         // here we put the arduino to sleep
                              // during normal running time.
     attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
                                       // buttonPressed when pin 5 goes from low to high 
-    attachInterrupt(4, wakeUpNowWifi, FALLING); // use interrupt 4 (pin 19) and run function
+    attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
                                       // wakeUpNow when pin 4 goes from low to high 
 }
 
+void wifiInterrupt() {
+  dataAviable=true;
+}
+
 void buttonPressed() {
-  wakeStatus=0;
   if(lcdActive){
     if(schermata!=1) 
       { inattivita=0;

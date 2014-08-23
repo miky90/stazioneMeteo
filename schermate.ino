@@ -1,4 +1,18 @@
-// FUNZIONI *****************************************************************// 
+// FUNZIONI *****************************************************************//
+void printError(int id){
+  switch(id) {
+    case 0 : 
+      errorConnection=true;
+      myGLCD.setFont(SmallFont);
+      myGLCD.setColor(0, 0, 0); 
+      myGLCD.setBackColor(255, 165, 0); //Arancione
+      myGLCD.print("Conn. Failed", 230, 3);
+      break;
+    default: 
+      break;
+  }
+}
+
 //metodo print interfaccia principale
 void printMain() {
   //numero schermata
@@ -22,6 +36,9 @@ void printMain() {
   myGLCD.setColor(255, 255, 255); //Bianco
   myGLCD.setBackColor(255, 165, 0); //Arancione
   myGLCD.print("METEO", CENTER, 1);
+  
+  if(errorConnection)
+    printError(0);
   
   //2 riga
   myGLCD.setColor(64, 64, 64); //Grigiet sotto
@@ -75,7 +92,7 @@ void printMain() {
   myGLCD.setColor(0, 0, 0); //Bianco
   myGLCD.setBackColor(255, 255, 255);
   if(pressione[0]!=0){
-    Serial.println(gradi[0]);
+    //Serial.println(gradi[0]);
     myGLCD.printNumF(gradi[0],1,32 , 181); 
   }
   else

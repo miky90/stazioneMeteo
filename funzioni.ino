@@ -1,3 +1,14 @@
+void aggiornaDati() {
+  Serial.println("func. aggiorno dati");
+  while (nrf24.available()) 
+  {
+    recuperaDati();
+    recuperaDatiInterni();
+    if(lcdActive & schermata==1) 
+      printMeteoAttuale();
+  }
+}
+
 // void saveToSd() {
  // if(sdAviable) {
    // res=file.openFile("BIGFILE.TXT", FILEMODE_TEXT_WRITE);
@@ -33,10 +44,12 @@
 // }
 
 void storeData () {
+  Serial.println("store data");
   storico.saveCurrent(currTemp, currHum, currPress);
 }
 
 void recuperaDatiInterni() {
+  Serial.println("aggiorno dati interni");
   delay(dht.getMinimumSamplingPeriod());
   currInHum = dht.getHumidity();
   currInTemp = dht.getTemperature();
@@ -47,6 +60,7 @@ void checkDataOra() {
 }
 
 void recuperaDati() {
+  Serial.println("aggiorno dati esterni");
   char* bufferWifi;
   // Should be a message for us now   
   uint8_t buf[RH_NRF24_MAX_MESSAGE_LEN];
@@ -57,6 +71,22 @@ void recuperaDati() {
     currTemp=getTemp(bufferWifi);
     currHum=getHum(bufferWifi);
     nrf24.setModeIdle();   //Moallità risparmio energetico wifi
+  }
+  printSerialTime(t);
+  printSerialTime(oldDataSaved);
+  if(oldDataSaved.hour==23){
+    if(t.hour==0|storico.getHum()==0)
+    {
+      storeData();
+      oldDataSaved=t;
+    }
+  }
+  else {
+    if (oldDataSaved.hour==t.hour-1|storico.getHum()==0) 
+    {
+      storeData();
+      oldDataSaved=t;
+    }
   }
 }
 int getPressione(char* buff) 
@@ -203,6 +233,13 @@ void backlightOff()
   digitalWrite(backlightPin,HIGH);
 }
 
+void printSerialTime(Time x){
+  Serial.print('\n');
+  Serial.print(x.hour);
+  Serial.print(x.min);
+  Serial.print(x.sec);
+  Serial.print(":");
+}
 //char *verboseError(byte err)
 //{
 //	switch (err)
