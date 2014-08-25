@@ -40,7 +40,7 @@ void setPressione()
   myGLCD.print("Altitudine:", 10, 40);
   //myGLCD.print(":", 154, 40);
   //myGLCD.print(":", 202, 40);
-  //myGLCD.print("Date:", 10, 140);
+  myGLCD.print("Salva Pressioni:", 10, 140);
   //myGLCD.print(".", 154, 140);
   //myGLCD.print(".", 202, 140);
   
@@ -55,6 +55,15 @@ void setPressione()
 //  drawUpButton(170, 110);
 //  drawUpButton(234, 110);
 //  drawDownButton(122, 161);
+      // Draw Save button
+//    myGLCD.setColor(64, 64, 128);
+//    myGLCD.fillRoundRect(165, 165, 319, 319);
+//    myGLCD.setColor(128, 128, 255);
+//    myGLCD.drawRoundRect(165, 165, 319, 319);
+//    myGLCD.setColor(255, 255, 255);
+//    myGLCD.setBackColor(64, 64, 128);
+//    myGLCD.print("Save", 210, 210);
+//    myGLCD.setBackColor(255, 255, 255);
 //  drawDownButton(170, 161);
 //  drawDownButton(234, 161);
 
@@ -405,6 +414,16 @@ void setPressione()
 //        t_temp.dow=calcDOW(t_temp.date, t_temp.mon, t_temp.year);
 //        showDOW(t_temp.dow);
       }
+//      else if ((y>=165) && (y<=319)) {
+//        if ((x>=165) && (x<=319)) {
+//          myGLCD.setColor (255, 0, 0);
+//          myGLCD.drawRoundRect(165, 165, 319, 319);
+//          for(int i=0;i>-25;i--)
+//            savePressure(i);
+//          EEPROM.write(55, 1);
+//        }
+//        myGLCD.drawRoundRect(165, 165, 319, 319);
+//      }
       else if ((y>=200) && (y<=239)) // Buttons: CANCEL / SAVE
       {
         if ((x>=165) && (x<=319))

@@ -19,7 +19,9 @@
 //                              IRQ   (Interrupt output, not connected)
 //                 GND----------GND   (ground in)
 //
+#include <avr/wdt.h>
 #include <avr/sleep.h>
+#include <avr/interrupt.h>
 #include <EEPROM.h>
 #include <UTFT.h>
 #include <UTouch.h>
@@ -51,6 +53,9 @@ const int backlightPin = 9;   // number of backlight tft pin
 const int wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4    
 
 volatile boolean dataAviable = false;
+int wakeCount =0;
+int cycleNum;
+#define STANBY_SEC 300
 
 //Indirizzi EEPROM
 //0,1 altitudine  
@@ -66,7 +71,11 @@ int inattivita = 0;           //tempo di inattività
 int schermata = 1;            /*! 1 - Schermata principale
                                *  2 - Grafico pressione
                                *  3 - Situazione Attuale
-                               */
+                               */                               
+//variabili per far lampeggiare la colonna della previsione +1
+boolean flashBar = true;
+int mSecFlash = 0;
+
 //dati meteo esterni
 float secAggWifi = 0.0;       //secondi dall'ultimo aggiornamento dei dati meteo esterni
 boolean firstConnection=true; //prima connessione con stazione esterna
@@ -113,9 +122,11 @@ void setup()
   
   attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
                                       // buttonPressed when pin 5 goes from low to high 
-  attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
+  //attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
                                       // wakeUpNow when pin 4 goes from low to high 
 
+  cycleNum = (int)(STANBY_SEC/8-STANBY_SEC/95);
+  wakeCount=(cycleNum-1);
   //Setup the LCD
   myGLCD.InitLCD();
   myGLCD.setFont(BigFont);
@@ -140,23 +151,6 @@ void setup()
   //setup DHT
   dht.setup(45);
   
-  //Setup SD
-  // pinMode(53,OUTPUT);
-  // file.setSSpin(53);
-  // file.initFAT(SPISPEED_LOW);
-  
-  // if (res!=NO_ERROR)
-  // {
-    // Serial.print("***** ERROR: ");
-    // Serial.println(verboseError(res));
-    //errore SD
-  // }
-  // else {
-    // if (!file.exists("DATA_LOG.TXT"))
-      // file.create("DATA_LOG.TXT");
-    // sdAviable=1;
-  // }
-  
   //Setup NRF24 Wifi board
   if (!nrf24.init())
     Serial.println("init failed");
@@ -172,78 +166,21 @@ void setup()
 
 void loop()
 {
-  if(wakeStatus==0) 
-  {
     while(true) 
     {
-      if(wakeStatus==1) {
-        wakeStatus=0;
-        aggiornaDati();
-        //Serial.println("intterupt wifi");
-        //delay(100);
-        sleepNow();
-      }
+      
       if(wakeStatus==2) {
-        Serial.println("intterupt wifi");
         wakeStatus=0;
         buttonPressed();
       }
-//      if(firstConnection) 
-//      {
-//        if(secAggWifi<305)
-//        {
-//          secAggWifi+=0.01;
-//          if (nrf24.available()) 
-//          {
-//            secAggWifi=0.0;
-//            recuperaDati();      //recupero dati
-//            recuperaDatiInterni(); 
-//            storeData();
-//            firstConnection=false;
-//            if(schermata==1)
-//                printMeteoAttuale();
-//          }
-//        }
-//        else 
-//        {
-//          recuperaDatiInterni();
-//          printError(0);
-//        }
-//      }
-//      else 
-//      {
-//        if(secAggWifi<305)
-//        {
-//          secAggWifi+=0.01;
-//          if(secAggWifi>295)
-//          {
-//            if (nrf24.available()) 
-//            {
-//              secAggWifi=0.0;
-//              recuperaDati();      //recupero dati
-//              recuperaDatiInterni(); 
-//              
-//              if(lcdActive & schermata==1)
-//                printMeteoAttuale();
-//            }
-//          }
-//        }
-//        else 
-//        {
-//          errorConnection=true;
-//          firstConnection=true;
-//          recuperaDatiInterni();
-//          printError(0);
-//        }
-//      }
-      
       if(lcdActive) {
-        if(dataAviable) {
+        if(nrf24.available()) {
           dataAviable=false;
           aggiornaDati();
         }
         checkDataOra();
-        touchInterface();                    //eseguo interfaccia touch
+        touchInterface();         //eseguo interfaccia touch
+        flashPrevision();
         if(inattivita==5000&schermata!=1)    //dopo 3000 di inattivita se sono su una schermata diversa dalla principale
           printMain();
         else if(inattivita==8000)              //dopo 5000 di inattivita
@@ -255,22 +192,24 @@ void loop()
         }
         delay(10);
       }
-      else 
-        delay(100);
+      else {
+        if(wakeCount==(cycleNum-1)) {
+          if(nrf24.available()) {
+            Serial.println("Dati disp");
+            wakeCount=0;
+            aggiornaDati();
+            sleepNow();
+          }
+        }
+        else {
+          Serial.print("No Dati disp: ");
+          Serial.println(wakeCount);
+          delay(100);
+          wakeCount++;
+          sleepNow();
+        }
+      }
     }
-  }
-  else if(wakeStatus==1) {
-    wakeStatus=0;
-    aggiornaDati();
-    //Serial.println("intterupt wifi");
-    //delay(100);
-    sleepNow();
-  }
-  else if(wakeStatus==2) {
-    Serial.println("intterupt wifi");
-    wakeStatus=0;
-    buttonPressed();
-  }
 }
 
 void wakeUpNowWifi()        // here the interrupt is handled after wakeup
@@ -316,7 +255,7 @@ void sleepNow()         // here we put the arduino to sleep
      * sleep mode: SLEEP_MODE_PWR_DOWN
      * 
      */  
-    set_sleep_mode(SLEEP_MODE_PWR_DOWN);   // sleep mode is set here
+    set_sleep_mode(SLEEP_MODE_PWR_SAVE);   // sleep mode is set here
 
     sleep_enable();          // enables the sleep bit in the mcucr register
                              // so sleep is possible. just a safety pin 
@@ -343,9 +282,12 @@ void sleepNow()         // here we put the arduino to sleep
     
     attachInterrupt(5, wakeUpNowButton, RISING); // use interrupt 5 (pin 18) and run function
                                       // wakeUpNow when pin 5 goes from low to high 
-    attachInterrupt(4, wakeUpNowWifi, RISING); // use interrupt 4 (pin 19) and run function
+    //attachInterrupt(4, wakeUpNowWifi, RISING); // use interrupt 4 (pin 19) and run function
                                       // wakeUpNow when pin 4 goes from low to high 
-    
+    wdt_reset();
+    myWatchdogEnable();
+    Serial.println("...going to sleep.");
+    delay(100);
     sleep_mode();            // here the device is actually put to sleep!!
                              // THE PROGRAM CONTINUES FROM HERE AFTER WAKING UP
     sleep_disable();         // first thing after waking from sleep:
@@ -353,12 +295,12 @@ void sleepNow()         // here we put the arduino to sleep
     detachInterrupt(5);      // disables interrupt 5 on pin 18 so the 
                              // wakeUpNow code will not be executed 
                              // during normal running time.
-    detachInterrupt(4);      // disables interrupt 4 on pin 19 so the 
+    //detachInterrupt(4);      // disables interrupt 4 on pin 19 so the 
                              // wakeUpNow code will not be executed 
                              // during normal running time.
     attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
                                       // buttonPressed when pin 5 goes from low to high 
-    attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
+    //attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
                                       // wakeUpNow when pin 4 goes from low to high 
 }
 
@@ -383,3 +325,20 @@ void buttonPressed() {
   }
 }
 
+ISR(WDT_vect)
+{
+  cli();
+  wdt_disable();
+  Serial.println("wakeup!");
+  sei();
+}
+
+void myWatchdogEnable() {  // turn on watchdog timer; interrupt mode every 2.0s
+  cli();
+  MCUSR = 0;
+  WDTCSR |= B00011000;
+  // WDTCSR = B01000111; // 2 second WDT 
+  //WDTCSR = B01100000;    // 4 second WDT 
+  WDTCSR = B01100001;  // 8 second WDT 
+  sei();
+}

@@ -1,11 +1,34 @@
 void aggiornaDati() {
   Serial.println("func. aggiorno dati");
+  recuperaDati();
   while (nrf24.available()) 
   {
     recuperaDati();
+  }
     recuperaDatiInterni();
     if(lcdActive & schermata==1) 
       printMeteoAttuale();
+}
+
+
+
+int calcolaPrevisione(int ora) {
+  if(ora==1) {
+    if(storico.getPress(-2)==0)
+      return 0;
+    int scartoUno = currPress-storico.getPress(-1);
+    int scartoDue = storico.getPress(-1)-storico.getPress(-2);
+    int prev = (scartoUno+scartoDue)/2;
+    return currPress+prev; 
+  }
+  else if (ora==3) {
+    if(storico.getPress(-3)==0)
+      return 0;
+    int scartoUno = currPress-storico.getPress(-1);
+    int scartoDue = storico.getPress(-1)-storico.getPress(-2);
+    int scartoTre = storico.getPress(-2)-storico.getPress(-3);
+    int prev = (scartoUno+scartoDue+scartoTre)/3;
+    return currPress+prev;
   }
 }
 
@@ -72,6 +95,7 @@ void recuperaDati() {
     currHum=getHum(bufferWifi);
     nrf24.setModeIdle();   //Moallità risparmio energetico wifi
   }
+  t = rtc.getTime();
   printSerialTime(t);
   printSerialTime(oldDataSaved);
   if(oldDataSaved.hour==23){
@@ -217,6 +241,25 @@ void saveAltitude(int alt) {
   altitudine=alt;
 }
 
+//void savePressure(int ora) {
+//  int pressione = storico.getPress(ora);
+//  if(ora<0&ora>-25){
+//    int indirizzo=2-ora;
+//    int miglCent = (int)(pressione/100);
+//    EEPROM.write(indirizzo, miglCent);
+//    EEPROM.write(indirizzo+25, (pressione-(miglCent*100)));
+//  }
+//}
+//
+//int readPressure(int ora) {
+//  if(ora<0&ora>-25){
+//    int indirizzo=2-ora;
+//    int miglCent = (int)(pressione/100);
+//    int p = EEPROM.write(indirizzo)*100;
+//    p += EEPROM.write(indirizzo+25);
+//    return p; 
+//  }
+//}
 
 int readAltitude() {
   int alt = EEPROM.read(0);

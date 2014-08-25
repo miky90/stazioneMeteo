@@ -13,6 +13,31 @@ void printError(int id){
   }
 }
 
+void flashPrevision(){
+  if(schermata==2) {
+    if(flashBar) {
+      if(mSecFlash==0)
+        drawPressBar(1,calcolaPrevisione(1));
+      else if(mSecFlash<2000)
+        mSecFlash+=1;
+      else {
+        flashBar=false;
+        mSecFlash=0;
+      }
+    }
+    else {
+      if(mSecFlash==0)
+        drawEmptyBar(1);
+      else if(mSecFlash<1000)
+        mSecFlash+=1;
+      else {
+        flashBar=true;
+        mSecFlash=0;
+      }
+    }
+  } 
+}
+
 //metodo print interfaccia principale
 void printMain() {
   //numero schermata
@@ -23,10 +48,10 @@ void printMain() {
   float umidita[2]; //0= -1h, 1= ora
   float gradi[2];  //0= -1h, 1= ora
   //recupero dati sensori
-  pressione[0]=storico.getPress(-1); pressione[1]=storico.getPress();
+  pressione[0]=storico.getPress(-1); pressione[1]=currPress;
   pressione[2]=0; pressione[3]=0;
-  umidita[0]=storico.getHum(-1); umidita[1]=storico.getHum();
-  gradi[0]=storico.getTemp(-1); gradi[1]=storico.getTemp();  
+  umidita[0]=storico.getHum(-1); umidita[1]=currHum;
+  gradi[0]=storico.getTemp(-1); gradi[1]=currTemp;  
  
   //LAYOUT
   myGLCD.setFont(BigFont);
@@ -288,6 +313,9 @@ void printPulsanti() {
 
 void grafico () {
   schermata=2;
+  flashBar=true;
+  mSecFlash=0;
+  
   //Titolo
   myGLCD.setFont(BigFont);
   myGLCD.setColor(255, 165, 0); //Arancione
@@ -325,7 +353,7 @@ void grafico () {
   drawPressBar(-3,storico.getPress(-3));
   drawPressBar(-1,storico.getPress(-1));
   drawPressBar(0,storico.getPress(0));
-  drawPressBar(1,0);
+  drawPressBar(1,calcolaPrevisione(1));
   
 ////rettangolini, altezza6 largh 29
 //  //-24
@@ -379,6 +407,32 @@ void grafico () {
  
   printPulsanti(); 
   printDataOra(true);
+}
+
+void drawEmptyBar(int ora) {
+  int pressione = 1020;
+  int x = 50;
+  int y = 190;
+  int colonna;
+  switch (ora) {
+    case -24: colonna = 0; break;
+    case -12: colonna = 1; break;
+    case -6: colonna = 2; break;
+    case -3: colonna = 3; break;
+    case -1: colonna = 4; break;
+    case 0: colonna = 5; break;
+    case 1: colonna = 6; break;
+    //default: colonna = 10; break;
+  }
+  x = 50 + 32*colonna;
+  int altezza = pressione - 1000;
+  myGLCD.setColor(255,255,255);
+  int k=0;
+  for(int i=0; i<altezza; i++) {
+    if((i%5==0) & (i!=0))
+      y-=2;
+    myGLCD.fillRect(x, y-(8*i), x+28, y-(8*i)-6);//1001
+  }
 }
 
 void drawPressBar(int ora, int pressione) {
