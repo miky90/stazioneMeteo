@@ -1,3 +1,4 @@
+
 /*
 *  Name:      Applicazione METEO 
 *  Hardware:  Arduino MEGA 2560 
@@ -30,6 +31,7 @@
 #include <RH_NRF24.h>
 #include "DHT.h"
 #include <StoricoDati.h>
+#include <Time.h>
 //#include <tinyFAT.h>
 //#include <avr/pgmspace.h>
 
@@ -44,7 +46,10 @@ extern prog_uint16_t poconuv[0x1FA4];
 extern prog_uint16_t sereno[0x1FA4];
 extern prog_uint16_t pioggiadebole[0x1FA4];
 extern prog_uint16_t settings[0x384];
-extern prog_uint16_t arrow[0x384];
+extern unsigned int arrow[0x384];
+//extern unsigned int serenonotte[0x1FA4];
+//extern prog_uint16_t poconuvnotte[0x1FA4];
+//extern prog_uint16_t neve[0x1FA4];
 
 //VARIABILI
 //set pin numbers:
@@ -52,7 +57,7 @@ const int buttonPin = 18;     // the number of the pushbutton pin /Interrupt 5
 const int backlightPin = 9;   // number of backlight tft pin
 const int wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4    
 
-volatile boolean dataAviable = false;
+//volatile boolean dataAviable = false;
 int wakeCount =0;
 int cycleNum;
 #define STANBY_SEC 300
@@ -68,7 +73,7 @@ volatile int wakeStatus = 0;  // variable to store a request for wakeUp
 boolean buttonState = false;  //stato del pulsante true = premuto
 boolean lcdActive = true;     //diventa false dopo un minuto di inattività
 int inattivita = 0;           //tempo di inattività
-int schermata = 1;            /*! 1 - Schermata principale
+int schermata = 0;            /*! 1 - Schermata principale
                                *  2 - Grafico pressione
                                *  3 - Situazione Attuale
                                */                               
@@ -81,7 +86,7 @@ float secAggWifi = 0.0;       //secondi dall'ultimo aggiornamento dei dati meteo
 boolean firstConnection=true; //prima connessione con stazione esterna
 boolean errorConnection=false; //errore nella connessione della stazione esterna
 double altitudine;
-int currPress=0;              //pressione corrente letta dai sensori esterni 
+float currPress=0.0;              //pressione corrente letta dai sensori esterni 
 char* currStrHum="--";        //stringa umidità corrente  
 float currHum = 0.0;          //umidita corrente letta dai sensori esterni 
 char* currStrTemp="--.-";     //stringa temperatura corrente
@@ -151,6 +156,11 @@ void setup()
   //setup DHT
   dht.setup(45);
   
+  //Setup SD
+  //pinMode(53,OUTPUT);
+  //file.setSSpin(53);
+  //file.initFAT();
+  
   //Setup NRF24 Wifi board
   if (!nrf24.init())
     Serial.println("init failed");
@@ -158,8 +168,14 @@ void setup()
   if (!nrf24.setChannel(10))
     Serial.println("setChannel failed");
   if (!nrf24.setRF(RH_NRF24::DataRate250kbps, RH_NRF24::TransmitPower0dBm))
-    Serial.println("setRF failed");   
-  recuperaDatiInterni();
+    Serial.println("setRF failed");  
+   
+  t = rtc.getTime();
+  oldDataSaved=t;
+  if(t.hour==0)
+    oldDataSaved.hour=23;
+  else
+    oldDataSaved.hour=t.hour-1;
   aggiornaDati();
   printMain();      //paint schermata iniziale
 }
@@ -175,7 +191,7 @@ void loop()
       }
       if(lcdActive) {
         if(nrf24.available()) {
-          dataAviable=false;
+          //dataAviable=false;
           aggiornaDati();
         }
         checkDataOra();
@@ -305,7 +321,7 @@ void sleepNow()         // here we put the arduino to sleep
 }
 
 void wifiInterrupt() {
-  dataAviable=true;
+  //dataAviable=true;
 }
 
 void buttonPressed() {

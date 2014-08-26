@@ -40,7 +40,7 @@ void setPressione()
   myGLCD.print("Altitudine:", 10, 40);
   //myGLCD.print(":", 154, 40);
   //myGLCD.print(":", 202, 40);
-  myGLCD.print("Salva Pressioni:", 10, 140);
+  //myGLCD.print("Salva Pressioni:", 10, 140);
   //myGLCD.print(".", 154, 140);
   //myGLCD.print(".", 202, 140);
   

@@ -1,6 +1,5 @@
 void aggiornaDati() {
   Serial.println("func. aggiorno dati");
-  recuperaDati();
   while (nrf24.available()) 
   {
     recuperaDati();
@@ -12,22 +11,22 @@ void aggiornaDati() {
 
 
 
-int calcolaPrevisione(int ora) {
+float calcolaPrevisione(int ora) {
   if(ora==1) {
     if(storico.getPress(-2)==0)
       return 0;
-    int scartoUno = currPress-storico.getPress(-1);
-    int scartoDue = storico.getPress(-1)-storico.getPress(-2);
-    int prev = (scartoUno+scartoDue)/2;
+    float scartoUno = currPress-storico.getPress(-1);
+    float scartoDue = storico.getPress(-1)-storico.getPress(-2);
+    float prev = (scartoUno+scartoDue)/2;
     return currPress+prev; 
   }
   else if (ora==3) {
     if(storico.getPress(-3)==0)
       return 0;
-    int scartoUno = currPress-storico.getPress(-1);
-    int scartoDue = storico.getPress(-1)-storico.getPress(-2);
-    int scartoTre = storico.getPress(-2)-storico.getPress(-3);
-    int prev = (scartoUno+scartoDue+scartoTre)/3;
+    float scartoZero = calcolaPrevisione(1)-currPress;
+    float scartoUno = currPress-storico.getPress(-1);
+    float scartoDue = storico.getPress(-1)-storico.getPress(-2);
+    float prev = (scartoZero+scartoUno+scartoDue)/3;
     return currPress+prev;
   }
 }
@@ -91,41 +90,48 @@ void recuperaDati() {
   if (nrf24.recv(buf, &len)) {
     bufferWifi=(char*)buf;
     currPress=sealevel(getPressione(bufferWifi),altitudine);
-    currTemp=getTemp(bufferWifi);
-    currHum=getHum(bufferWifi);
+    float tempWifi=getTemp(bufferWifi);
+    float humWifi= getHum(bufferWifi);
+    if((currStrTemp!= "--.-") && (currStrHum != "--") && (currPress!=0)) {
+      currTemp=tempWifi;
+      currHum=humWifi;
+    }
+    else {
+      currTemp=0;
+      currStrTemp= "--.-";
+      currHum=0;
+      currStrHum = "--";
+    }
+    
     nrf24.setModeIdle();   //Moallità risparmio energetico wifi
   }
-  t = rtc.getTime();
+  if(!lcdActive);
+    t = rtc.getTime();
   printSerialTime(t);
   printSerialTime(oldDataSaved);
-  if(oldDataSaved.hour==23){
-    if(t.hour==0|storico.getHum()==0)
+  if(((oldDataSaved.hour==23) && (t.hour==0))){
+      storeData();
+      oldDataSaved=t;
+  }
+  else if ((oldDataSaved.hour==t.hour-1)) 
     {
       storeData();
       oldDataSaved=t;
     }
-  }
-  else {
-    if (oldDataSaved.hour==t.hour-1|storico.getHum()==0) 
-    {
-      storeData();
-      oldDataSaved=t;
-    }
-  }
 }
-int getPressione(char* buff) 
+float getPressione(char* buff) 
 {
   if(buff[0]=='p' && buff[1]>='0' && buff[1]<='9') 
   {
-    char pr[5];
-    for(int i=0;i<5;i++) {
+    char pr[7];
+    for(int i=0;i<7;i++) {
       pr[i]=buff[i+1];
     }
-    pr[4]='\0';
-    return atoi(pr);
+    pr[6]='\0';
+    return atof(pr);
   }
   else 
-    return 0;
+    return 0.0;
 }
 float getTemp(char* buff) 
 {
