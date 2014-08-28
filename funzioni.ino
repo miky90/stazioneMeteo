@@ -290,6 +290,14 @@ void printSerialTime(Time x){
   Serial.print(x.sec);
   Serial.print(":");
 }
+
+int nextInt(float num) {
+  if(num>0)
+    return (int)(num+0.5);
+  else
+    return (int)(num-0.5);
+}
+
 //char *verboseError(byte err)
 //{
 //	switch (err)

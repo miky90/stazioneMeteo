@@ -183,6 +183,7 @@ void printSituazioneAttuale() {
   //numero schermata
   schermata=3;
   //2 riga
+  myGLCD.setFont(BigFont);
   myGLCD.setColor(64, 64, 64); //Grigiet sotto
   myGLCD.fillRect(0, 218, 319, 239);
   myGLCD.setColor(255, 255, 255); //Bianco
@@ -438,7 +439,7 @@ void grafico () {
 }
 
 void drawEmptyBar(int ora) {
-  int pressione = 1020;
+  int pressione = maxScala;
   int x = 50;
   int y = 190;
   int colonna;
@@ -452,7 +453,7 @@ void drawEmptyBar(int ora) {
     case 1: colonna = 6; break;
   }
   x = 50 + 32*colonna;
-  int altezza = pressione - 1000;
+  int altezza = pressione - (maxScala - 20);
   myGLCD.setColor(255,255,255);
   int k=0;
   for(int i=0; i<altezza; i++) {
@@ -463,7 +464,7 @@ void drawEmptyBar(int ora) {
 }
 
 void drawPressBar(int ora, float tPressione) {
-    int pressione = round(tPressione);
+    int pressione = nextInt(tPressione);
     int x = 50;
     int y = 190;
     int colonna;
@@ -479,8 +480,6 @@ void drawPressBar(int ora, float tPressione) {
     }
     x = 50 + 32*colonna;
     if(pressione>1000) {
-      if(pressione>1020)
-        pressione=1020;
       int altezza = pressione - (maxScala - 20);
       if(colonna==6){
         if(tPressione<currPress)
