@@ -20,14 +20,15 @@ float calcolaPrevisione(int ora) {
     float prev = (scartoUno+scartoDue)/2;
     return currPress+prev; 
   }
-  else if (ora==3) {
-    if(storico.getPress(-3)==0)
+  else if (ora==2) {
+    if(storico.getPress(-2)==0)
       return 0;
-    float scartoZero = calcolaPrevisione(1)-currPress;
+    float prev1 = calcolaPrevisione(1);
+    float scartoZero = prev1-currPress;
     float scartoUno = currPress-storico.getPress(-1);
     float scartoDue = storico.getPress(-1)-storico.getPress(-2);
     float prev = (scartoZero+scartoUno+scartoDue)/3;
-    return currPress+prev;
+    return prev1+prev;
   }
 }
 

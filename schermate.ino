@@ -53,7 +53,7 @@ void printMain() {
   float gradi[2];  //0= -1h, 1= ora
   //recupero dati sensori
   pressione[0]=storico.getPress(-1); pressione[1]=currPress;
-  pressione[2]=calcolaPrevisione(1); pressione[3]=calcolaPrevisione(3);
+  pressione[2]=calcolaPrevisione(1); pressione[3]=calcolaPrevisione(2);
   umidita[0]=storico.getHum(-1); umidita[1]=currHum;
   gradi[0]=storico.getTemp(-1); gradi[1]=currTemp;
  
@@ -111,10 +111,10 @@ void printMain() {
     myGLCD.print("--",48,161);
   myGLCD.print("%", 80, 161);
   
-  // previsione +3h
+  // previsione +2h
   myGLCD.setColor(255, 255, 255);
   myGLCD.setBackColor(64,64,64);
-  myGLCD.print("  +3h ", 208, 161); 
+  myGLCD.print("  +2h ", 208, 161); 
   myGLCD.setFont(SmallFont);
   myGLCD.setBackColor(255,255,255);
   myGLCD.setColor(0, 0, 0);
@@ -261,7 +261,7 @@ void printImageMeteo(int colonna, float pressione) // '0' = -1h, '1' = ora, '2' 
       //else
         //immagine=serenonotte;
     }
-    else if(pressione>=1009 & pressione<=1015)
+    else if(pressione>=1009 & pressione<1016)
     {
       //if((t.hour<21) && (t.hour>6))
         immagine=poconuv;
@@ -283,12 +283,14 @@ void printImageMeteo(int colonna, float pressione) // '0' = -1h, '1' = ora, '2' 
   }
   else
   {
+    myGLCD.setFont(SmallFont);
+    myGLCD.setColor(0, 0, 0);
     if(colonna==0) //-1h
-      myGLCD.print("X",60,87);
+      myGLCD.print("N.A.",60,87);
     else if(colonna==1) //ora
-      myGLCD.print("X",157,87); 
+      myGLCD.print("N.A.",157,87); 
     else if(colonna==2)  //+1h
-      myGLCD.print("X",253,87);
+      myGLCD.print("N.A.",253,87);
   }
  
 } 
@@ -380,34 +382,57 @@ void grafico () {
   myGLCD.drawLine(208, 24, 208, 192);
   myGLCD.drawLine(240, 24, 240, 192);
   
-  drawPressBar(-24,storico.getPress(-24));
-  drawPressBar(-12,storico.getPress(-12));
-  drawPressBar(-6,storico.getPress(-6));
-  drawPressBar(-3,storico.getPress(-3));
-  drawPressBar(-1,storico.getPress(-1));
-  //drawPressBar(0,round(storico.getPress(0)));
-  drawPressBar(0,currPress);
-  drawPressBar(1,calcolaPrevisione(1));
+  float pressioni[7];
+  pressioni[0]=storico.getPress(-24);
+  pressioni[1]=storico.getPress(-12);
+  pressioni[2]=storico.getPress(-6);
+  pressioni[3]=storico.getPress(-3);
+  pressioni[4]=storico.getPress(-1);
+  pressioni[5]=currPress;
+  pressioni[6]=calclaPrevisione(1);
+  
+  int massimo = max (pressioni[0],pressioni[1]);
+  massimo = max (massimo,pressioni[2]);
+  massimo = max (massimo,pressioni[3]);
+  massimo = max (massimo,pressioni[4]);
+  massimo = max (massimo,pressioni[5]);
+  massimo = max (massimo,pressioni[6]);
+  
+  int maxScala = 1000;
+  if(massimo>1015)
+    maxScala = 1025;
+  else if(massimo<1015 & massimo>1005)
+    maxScala = 1020;
+  else if(massimo<1005)
+    maxScala = 1015
+  
+  drawPressBar(-24,pressioni[0],maxScala);
+  drawPressBar(-12,pressioni[1],maxScala);
+  drawPressBar(-6,pressioni[2],maxScala);
+  drawPressBar(-3,pressioni[3],maxScala);
+  drawPressBar(-1,pressioni[4],maxScala);
+  drawPressBar(0,pressioni[5],maxScala);
+  drawPressBar(1,pressioni[6],maxScala);
   
   //1020hpa grafico
   myGLCD.setColor(0, 0, 0); //Nero
   myGLCD.setBackColor(255,255,255);
-  myGLCD.print("  1020", LEFT, 26);
+  myGLCD.printNumI(maxScala, 16, 26);
   //1015hpa gr
   myGLCD.setColor(0, 0, 0); //Bianco
-  myGLCD.print("  1015", LEFT, 62);
+  myGLCD.printNumI((maxScala-5), 16, 62);
   myGLCD.drawLine(49, 66, 271, 66);
   //1010hpa grafico
   myGLCD.setColor(0, 0, 0); //Bianco
-  myGLCD.print("  1010", LEFT, 104);
+  myGLCD.printNumI((maxScala-10), 16, 104);
   myGLCD.drawLine(49, 108, 271, 108);
   //1005hpa gr
   myGLCD.setColor(0, 0, 0); //Bianco
-  myGLCD.print("  1005", LEFT, 146);
+  myGLCD.printNumI((maxScala-15), 16, 146);
   myGLCD.drawLine(49, 150, 271, 150);
   //1000hpa grafico
   myGLCD.setColor(0, 0, 0); //Bianco
-  myGLCD.print("  1000", LEFT, 185);
+  myGLCD.printNumI((maxScala-20), 16, 185);
  
   printPulsanti(); 
   printDataOra(true);
@@ -438,7 +463,7 @@ void drawEmptyBar(int ora) {
   }
 }
 
-void drawPressBar(int ora, float tPressione) {
+void drawPressBar(int ora, float tPressione, int maxScala) {
     int pressione = round(tPressione);
     int x = 50;
     int y = 190;
@@ -457,7 +482,7 @@ void drawPressBar(int ora, float tPressione) {
     if(pressione>1000) {
       if(pressione>1020)
         pressione=1020;
-      int altezza = pressione - 1000;
+      int altezza = pressione - (maxScala - 20);
       if(colonna==6){
         if(tPressione<currPress)
           myGLCD.setColor(255,106,6);
