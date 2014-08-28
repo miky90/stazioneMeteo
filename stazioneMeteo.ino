@@ -79,6 +79,7 @@ int schermata = 0;            /*! 1 - Schermata principale
                                */                               
 //variabili per far lampeggiare la colonna della previsione +1
 boolean flashBar = true;
+int maxScala = 1000;
 int mSecFlash = 0;
 
 //dati meteo esterni

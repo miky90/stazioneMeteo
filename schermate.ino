@@ -389,7 +389,7 @@ void grafico () {
   pressioni[3]=storico.getPress(-3);
   pressioni[4]=storico.getPress(-1);
   pressioni[5]=currPress;
-  pressioni[6]=calclaPrevisione(1);
+  pressioni[6]=calcolaPrevisione(1);
   
   int massimo = max (pressioni[0],pressioni[1]);
   massimo = max (massimo,pressioni[2]);
@@ -398,21 +398,20 @@ void grafico () {
   massimo = max (massimo,pressioni[5]);
   massimo = max (massimo,pressioni[6]);
   
-  int maxScala = 1000;
   if(massimo>1015)
     maxScala = 1025;
   else if(massimo<1015 & massimo>1005)
     maxScala = 1020;
   else if(massimo<1005)
-    maxScala = 1015
+    maxScala = 1015;
   
-  drawPressBar(-24,pressioni[0],maxScala);
-  drawPressBar(-12,pressioni[1],maxScala);
-  drawPressBar(-6,pressioni[2],maxScala);
-  drawPressBar(-3,pressioni[3],maxScala);
-  drawPressBar(-1,pressioni[4],maxScala);
-  drawPressBar(0,pressioni[5],maxScala);
-  drawPressBar(1,pressioni[6],maxScala);
+  drawPressBar(-24,pressioni[0]);
+  drawPressBar(-12,pressioni[1]);
+  drawPressBar(-6,pressioni[2]);
+  drawPressBar(-3,pressioni[3]);
+  drawPressBar(-1,pressioni[4]);
+  drawPressBar(0,pressioni[5]);
+  drawPressBar(1,pressioni[6]);
   
   //1020hpa grafico
   myGLCD.setColor(0, 0, 0); //Nero
@@ -463,7 +462,7 @@ void drawEmptyBar(int ora) {
   }
 }
 
-void drawPressBar(int ora, float tPressione, int maxScala) {
+void drawPressBar(int ora, float tPressione) {
     int pressione = round(tPressione);
     int x = 50;
     int y = 190;
