@@ -399,13 +399,34 @@ void grafico () {
   massimo = max (massimo,pressioni[5]);
   massimo = max (massimo,pressioni[6]);
   
-  if(massimo>1015)
+  int minimo = min (pressioni[0],pressioni[1]);
+  minimo = min (minimo,pressioni[2]);
+  minimo = min (minimo,pressioni[3]);
+  minimo = min (minimo,pressioni[4]);
+  minimo = min (minimo,pressioni[5]);
+  minimo = min (minimo,pressioni[6]);
+  
+  int  media = (massimo + minimo )/2;
+  if(media > 1010) {
+    if(minimo<1005)
+      maxScala = 1020;
+    else
+      maxScala = 1025;
+  }
+  else {
+    if(massimo>1020)
+      maxScala = 1025;
+    else
+      maxScala = 1020;
+  }
+  
+  /*if(massimo>1015)
     maxScala = 1025;
   else if(massimo<1015 & massimo>1005)
     maxScala = 1020;
   else if(massimo<1005)
     maxScala = 1015;
-  
+  */
   drawPressBar(-24,pressioni[0]);
   drawPressBar(-12,pressioni[1]);
   drawPressBar(-6,pressioni[2]);

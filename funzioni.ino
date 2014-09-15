@@ -269,8 +269,8 @@ void saveAltitude(int alt) {
 //}
 
 int readAltitude() {
-  int alt = EEPROM.read(0);
-  alt += EEPROM.read(1)*100;
+  int alt = EEPROM.read(0)*100;
+  alt += EEPROM.read(1);
   return alt;
 }
 

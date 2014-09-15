@@ -1,4 +1,3 @@
-
 /*
 *  Name:      Applicazione METEO 
 *  Hardware:  Arduino MEGA 2560 
@@ -32,6 +31,7 @@
 #include "DHT.h"
 #include <StoricoDati.h>
 #include <Time.h>
+#include <SunLight.h>
 //#include <tinyFAT.h>
 //#include <avr/pgmspace.h>
 
