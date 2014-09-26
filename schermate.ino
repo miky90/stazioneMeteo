@@ -42,10 +42,9 @@ void flashPrevision(){
   } 
 }
 
-//metodo print interfaccia principale
-void printMain() {
+void printSituazioneEsterna() {
   //numero schermata
-  schermata=1;
+  schermata=3;
   
   //variabili
   float pressione[4]; //0= -1h, 1= ora, 2= +1h, 3= +3h
@@ -60,11 +59,11 @@ void printMain() {
   //LAYOUT
   myGLCD.setFont(BigFont);
   //Titolo
-  myGLCD.setColor(255, 165, 0); //Arancione
-  myGLCD.fillRect(0, 0, 319, 20);
-  myGLCD.setColor(255, 255, 255); //Bianco
-  myGLCD.setBackColor(255, 165, 0); //Arancione
-  myGLCD.print("METEO", CENTER, 1);
+//  myGLCD.setColor(255, 165, 0); //Arancione
+//  myGLCD.fillRect(0, 0, 319, 20);
+//  myGLCD.setColor(255, 255, 255); //Bianco
+//  myGLCD.setBackColor(255, 165, 0); //Arancione
+//  myGLCD.print("METEO", CENTER, 1);
   
   if(errorConnection)
     printError(0);
@@ -179,16 +178,25 @@ void printMeteoAttuale() {
   myGLCD.print(String(currStrTemp)+"'",CENTER,181);
   printImageMeteo(1,currPress);
 }
-void printSituazioneAttuale() {
-  //numero schermata
-  schermata=3;
+//metodo print interfaccia principale
+void printMain() {
+  schermata=1;
+  //LAYOUT
+  myGLCD.setFont(BigFont);
+  //Titolo
+  myGLCD.setColor(255, 165, 0); //Arancione
+  myGLCD.fillRect(0, 0, 319, 20);
+  myGLCD.setColor(255, 255, 255); //Bianco
+  myGLCD.setBackColor(255, 165, 0); //Arancione
+  myGLCD.print("METEO", CENTER, 1);
+  
   //2 riga
   myGLCD.setFont(BigFont);
   myGLCD.setColor(64, 64, 64); //Grigiet sotto
   myGLCD.fillRect(0, 218, 319, 239);
   myGLCD.setColor(255, 255, 255); //Bianco
   myGLCD.setBackColor(64, 64, 64); //Grigiet sotto
-  myGLCD.print("Situazione Attuale", CENTER, 21);
+  myGLCD.print(" Situazione Attuale ", CENTER, 21);
 
   //'sfondo'
   myGLCD.setColor(255,255,255); 
@@ -407,7 +415,7 @@ void grafico () {
   minimo = min (minimo,pressioni[6]);
   
   int  media = (massimo + minimo )/2;
-  if(media > 1010) {
+  if(media > 1015) {
     if(minimo<1005)
       maxScala = 1020;
     else

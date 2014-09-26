@@ -73,9 +73,9 @@ volatile int wakeStatus = 0;  // variable to store a request for wakeUp
 boolean buttonState = false;  //stato del pulsante true = premuto
 boolean lcdActive = true;     //diventa false dopo un minuto di inattività
 int inattivita = 0;           //tempo di inattività
-int schermata = 0;            /*! 1 - Schermata principale
+int schermata = 0;            /*! 1 - Situazione Attuale
                                *  2 - Grafico pressione
-                               *  3 - Situazione Attuale
+                               *  3 - Schermata esterno
                                */                               
 //variabili per far lampeggiare la colonna della previsione +1
 boolean flashBar = true;

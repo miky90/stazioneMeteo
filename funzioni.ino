@@ -4,9 +4,10 @@ void aggiornaDati() {
   {
     recuperaDati();
   }
+    touchInterface();
     recuperaDatiInterni();
-    if(lcdActive & schermata==1) 
-      printMeteoAttuale();
+//    if(lcdActive & schermata==3) 
+//      printMeteoAttuale();
 }
 
 
@@ -183,7 +184,58 @@ void touchInterface()
     // azioni diverse in base alla schermata
     switch(schermata) 
     {
-    case 1: //caso uno schermata principale 
+      case 1: //caso uno schermata principale 
+      if((y>=37) && (y<=177)) {  //out secondo rettangolo
+        if((x>=106) && (x<=206) ) {
+           myGLCD.setColor(255, 165, 0);
+           myGLCD.drawRect(106, 37, 206, 177);
+           printSituazioneEsterna();
+        }
+        else if((x>=5) && (x<=105) ) { //in primo rettangolo
+           myGLCD.setColor(255, 165, 0);
+           myGLCD.drawRect(5, 37, 105, 177);
+           
+        }
+      }
+      else if(y>=220) {
+         myGLCD.setColor(255, 165, 0);
+         myGLCD.drawRect(0,221, 319, 239);
+         setClock();
+      }
+      //      else if (((y>=184) && (y<=214)) && ((x>=15) && (x<=45)))        //clicco su indietro
+//      {
+//        myGLCD.setColor(255, 165, 0);
+//        myGLCD.drawRect(15,184, 45, 214);
+//        printMain();
+//      }
+//      else if (((y>=184) && (y<=214)) && ((x>=60) && (x<=184))) //clicco su settings
+//      {
+//        myGLCD.setColor(255, 165, 0);
+//        myGLCD.drawRect(60,184, 90, 214);
+//        //printSettings();
+//        setClock();
+//      }
+    break;
+    case 2:  // caso 2 schermata grafico pressione
+      if (((y>=45) && (y<=75)) && ((x>=280) && (x<=310)))        //clicco su indietro
+      {
+        myGLCD.setColor(255, 165, 0);
+        myGLCD.drawRect(280, 45, 310, 75);
+        printSituazioneEsterna();
+      }
+      else if (((y>=132) && (y<=162)) && ((x>=280) && (x<=310))) //clicco su settings
+      {
+        myGLCD.setColor(255, 165, 0);
+        myGLCD.drawRect(280, 132, 310, 162);
+        setPressione();
+      }
+      else if(y>=220) {
+         myGLCD.setColor(255, 165, 0);
+         myGLCD.drawRect(0,221, 319, 239);
+         setClock();
+      }
+      break;
+    case 3: // schermata situazione esterna
       myGLCD.drawRect(15, 37, 111,219);
       if (((y>=37) && (y<=219)) && ((x>=15) && (x<=111)))        //clicco sul primo rettangolo
       {
@@ -195,7 +247,7 @@ void touchInterface()
       {
         myGLCD.setColor(255, 165, 0);
         myGLCD.drawRect(112, 37, 207, 219);
-        printSituazioneAttuale();
+        printMain();
       }
       else if (((y>=37) && (y<=219)) && ((x>=208) && (x<=303)))  //clicco sul terzo rettangolo 
       {
@@ -203,34 +255,10 @@ void touchInterface()
         myGLCD.drawRect(208, 37, 303, 219);
         grafico();
       }
-      break;
-    case 2:  // caso 2 schermata grafico pressione
-      if (((y>=45) && (y<=75)) && ((x>=280) && (x<=310)))        //clicco su indietro
-      {
-        myGLCD.setColor(255, 165, 0);
-        myGLCD.drawRect(280, 45, 310, 75);
-        printMain();
-      }
-      else if (((y>=132) && (y<=162)) && ((x>=280) && (x<=310))) //clicco su settings
-      {
-        myGLCD.setColor(255, 165, 0);
-        myGLCD.drawRect(280, 132, 310, 162);
-        setPressione();
-      }
-      break;
-    case 3:
-       if (((y>=184) && (y<=214)) && ((x>=15) && (x<=45)))        //clicco su indietro
-      {
-        myGLCD.setColor(255, 165, 0);
-        myGLCD.drawRect(15,184, 45, 214);
-        printMain();
-      }
-      else if (((y>=184) && (y<=214)) && ((x>=60) && (x<=184))) //clicco su settings
-      {
-        myGLCD.setColor(255, 165, 0);
-        myGLCD.drawRect(60,184, 90, 214);
-        //printSettings();
-        setClock();
+      else if(y>=220) {
+         myGLCD.setColor(255, 165, 0);
+         myGLCD.drawRect(0,221, 319, 239);
+         setClock();
       }
       break;
     default:
