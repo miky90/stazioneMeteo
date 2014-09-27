@@ -326,6 +326,37 @@ int nextInt(float num) {
     return (int)(num-0.5);
 }
 
+uint8_t* calcolaOrariSole() {
+  if(!lcdActive);
+    t = rtc.getTime();
+  // The date on which you want to calculate astronomical events
+  uint8_t day = t.date;
+  uint8_t month = t.mon;
+  uint16_t year = t.year;
+  
+  // The array where will be saved variables of sunrise and sunset
+  // with the following form:
+  // timeArray[ Rise_hours, Rise_minutes, Set_hours, Set_minutes ]
+  // if you want you can use specially created index:
+  // SUNRISE_H SUNRISE_M SUNSET_H SUNSET_M
+  uint8_t* timeArray;
+  
+  // This functions are used to set your geographical coordinates of your location
+  mySun.setPosition(myLatitude, myLongitude);
+  
+  // This is the function that allows you to calculate sunrise and sunset
+  boolean check = mySun.computeSR(timeArray, twilight_minutes, day, month, year);
+  //return true if all the data entered are correct
+
+  if( check == true )
+  {
+    return timeArray;
+  }
+  else
+    // Some parameter is incorrect and the function can not perform the calculation
+    Serial.println("Something wrong in function computeSR...please check your input parameteer");
+}
+
 //char *verboseError(byte err)
 //{
 //	switch (err)

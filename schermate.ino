@@ -43,6 +43,7 @@ void flashPrevision(){
 }
 
 void printSituazioneEsterna() {
+  detachInterrupt(5);
   //numero schermata
   schermata=3;
   
@@ -156,7 +157,7 @@ void printSituazioneEsterna() {
   printMeteoAttuale();
   printImageMeteo(2,pressione[2]);
   
-  
+  attachInterrupt(5, buttonPressed, RISING);
   //FINE DATI
 }
 
@@ -259,36 +260,58 @@ void printMain() {
 
 void printImageMeteo(int colonna, float pressione) // '0' = -1h, '1' = ora, '2' = +1h  
 {
+  uint8_t* timeArray; 
+  timeArray = calcolaOrariSole();
+  // if you want you can use specially created index:
+  // SUNRISE_H SUNRISE_M SUNSET_H SUNSET_M
+  word res;
   myGLCD.setFont(BigFont);
   if(pressione!=0) 
   {
-    prog_uint16_t* immagine;
+   int index=0;
     if(pressione>=1016)
     {
-      //if((t.hour<21) && (t.hour>6))
-        immagine=sereno;
-      //else
-        //immagine=serenonotte;
+      if((t.hour<timeArray[SUNSET_H]) && (t.hour>timeArray[SUNRISE_H]))
+        index=0;
+      else
+        index=3;
     }
     else if(pressione>=1009 & pressione<1016)
     {
-      //if((t.hour<21) && (t.hour>6))
-        immagine=poconuv;
-      //else
-        //immagine=poconuvnotte;
+      if((t.hour<timeArray[SUNSET_H]) && (t.hour>timeArray[SUNRISE_H]))
+        index=1;
+      else
+        index=4;
     }
     else if(pressione<1009) {
-      //if(currTemp>1.0)
-        immagine = pioggiadebole;
-      //else
-        //immagine = neve;
+      if(currTemp>1.0)
+        index = 2;
+      else
+        index = 5;
     }
     if(colonna==0) //-1h
-      myGLCD.drawBitmap(18,45,90,90,immagine);
+      res = myFiles.loadBitmap(18, 45, 90, 90, images[index]);
+      //myGLCD.drawBitmap(18,45,90,90,immagine);
     else if(colonna==1) //ora
-      myGLCD.drawBitmap(115,45,90,90,immagine); 
+      res = myFiles.loadBitmap(115, 45, 90, 90, images[index]);
+      //myGLCD.drawBitmap(115,45,90,90,immagine); 
     else if(colonna==2)  //+1h
-      myGLCD.drawBitmap(211,45,90,90,immagine);
+      res = myFiles.loadBitmap(211, 45, 90, 90, images[index]);
+      //myGLCD.drawBitmap(211,45,90,90,immagine);
+    if (res!=0)
+      {
+        myGLCD.setFont(SmallFont);
+        if (res==0x10)
+        {
+          myGLCD.print("File not found...", 0, 0);
+          myGLCD.print(images[index], 0, 14);
+        }
+        else
+        {
+          myGLCD.print("ERROR: ", 0, 0);
+          myGLCD.printNumI(res, 56, 0);
+        }
+      }
   }
   else
   {
@@ -301,7 +324,7 @@ void printImageMeteo(int colonna, float pressione) // '0' = -1h, '1' = ora, '2' 
     else if(colonna==2)  //+1h
       myGLCD.print("N.A.",253,87);
   }
- 
+  
 } 
 
 void printDataOra(boolean ristampa) {
@@ -415,14 +438,18 @@ void grafico () {
   minimo = min (minimo,pressioni[6]);
   
   int  media = (massimo + minimo )/2;
-  if(media > 1015) {
+  if(media > 1017) {
     if(minimo<1005)
       maxScala = 1020;
-    else
+    else if(massimo <1025)
       maxScala = 1025;
+    else
+      maxScala = 1030;
   }
   else {
-    if(massimo>1020)
+    if(massimo>1025)
+		maxScala = 1030;
+    else if(massimo>1020)
       maxScala = 1025;
     else
       maxScala = 1020;

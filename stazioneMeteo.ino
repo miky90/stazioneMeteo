@@ -32,7 +32,10 @@
 #include <StoricoDati.h>
 #include <Time.h>
 #include <SunLight.h>
-//#include <tinyFAT.h>
+#include <tinyFAT.h>
+#include <UTFT_tinyFAT.h>
+#include <SunLight.h>
+
 //#include <avr/pgmspace.h>
 
 
@@ -42,14 +45,13 @@ extern uint8_t SmallFont[];
 extern uint8_t SevenSegNumFont[];
 
 //Image Files
-extern prog_uint16_t poconuv[0x1FA4];
-extern prog_uint16_t sereno[0x1FA4];
-extern prog_uint16_t pioggiadebole[0x1FA4];
 extern prog_uint16_t settings[0x384];
 extern unsigned int arrow[0x384];
 //extern unsigned int serenonotte[0x1FA4];
 //extern prog_uint16_t poconuvnotte[0x1FA4];
 //extern prog_uint16_t neve[0x1FA4];
+
+char* images[]={"MET0.RAW", "MET1.RAW", "MET2.RAW", "MET3.RAW", "MET4.RAW", "MET5.RAW" };
 
 //VARIABILI
 //set pin numbers:
@@ -116,10 +118,25 @@ RH_NRF24 nrf24(8,49);              	//Singleton instance of the radio driver
 DHT dht;						   	//Sensore Temperatura
 DS1307 rtc(20, 21);					//Orologio
 
+UTFT_tinyFAT myFiles(&myGLCD);
+
+SunLight mySun; // Declaration of the object
+// Setting the longitude of your location
+// Will be used to estimate the average Noon
+float myLongitude = 11.7863487; //selvazzano 
+
+// Setting the latitude of your location
+float myLatitude = 45.3912659;
+
+// If you want to anticipate the sunrise and postpone the sunset.
+// Permits data beetween 0 and 60 and the unit of measurement is minutes
+uint8_t twilight_minutes = 0;
+
 void setup()
 {
   randomSeed(analogRead(0));
-  
+  pinMode(53,OUTPUT);
+  file.setSSpin(53);
   pinMode(backlightPin,OUTPUT);    // inizialize the backlight pin as output
   backlightOff();                  // set initial state of backlight
   
@@ -142,6 +159,8 @@ void setup()
   
   altitudine=readAltitude();
   //altitudine=30;
+  
+  file.initFAT();
   
   //inizializza comunicazione seriale
   Serial.begin(115200);
@@ -177,6 +196,7 @@ void setup()
     oldDataSaved.hour=23;
   else
     oldDataSaved.hour=t.hour-1;
+  
   aggiornaDati();
   printMain();      //paint schermata iniziale
 }
