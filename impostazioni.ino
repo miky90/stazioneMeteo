@@ -9,7 +9,7 @@ void setPressione()
   waitForTouchRelease();    
   
   //myGLCD.clrScr();
-  myGLCD.setFont(BigFont);
+  myGLCD.setFont(franklingothic_normal);
   
   myGLCD.setColor(255, 255, 255); //Bianco
   myGLCD.fillRect(0, 0, 319, 239);
@@ -120,7 +120,7 @@ void setPressione()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         else if ((x>=220) && (x<=252))
@@ -149,7 +149,7 @@ void setPressione()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
 //        else if ((x>=218) && (x<=250))
@@ -174,7 +174,7 @@ void setPressione()
 //            myGLCD.setFont(SmallFont);
 //            myGLCD.print("Changed!", 10, 10);
 //            myGLCD.setColor(0, 0, 0);
-//            myGLCD.setFont(BigFont);
+//            myGLCD.setFont(franklingothic_normal);
 //          }
 //        }
       }
@@ -208,7 +208,7 @@ void setPressione()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         else if ((x>=220) && (x<=252))
@@ -239,7 +239,7 @@ void setPressione()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
 //        else if ((x>=218) && (x<=250))
@@ -264,7 +264,7 @@ void setPressione()
 //            myGLCD.setFont(SmallFont);
 //            myGLCD.print("Changed!", 10, 10);
 //            myGLCD.setColor(0, 0, 0);
-//            myGLCD.setFont(BigFont);
+//            myGLCD.setFont(franklingothic_normal);
 //          }
 //        }
 //      }
@@ -291,7 +291,7 @@ void setPressione()
 //            myGLCD.setFont(SmallFont);
 //            myGLCD.print("Changed!", 10, 110);
 //            myGLCD.setColor(0, 0, 0);
-//            myGLCD.setFont(BigFont);
+//            myGLCD.setFont(franklingothic_normal);
 //          }
 //        }
 //        else if ((x>=170) && (x<=202))
@@ -317,7 +317,7 @@ void setPressione()
 //            myGLCD.setFont(SmallFont);
 //            myGLCD.print("Changed!", 10, 110);
 //            myGLCD.setColor(0, 0, 0);
-//            myGLCD.setFont(BigFont);
+//            myGLCD.setFont(franklingothic_normal);
 //          }
 //        }
 //        else if ((x>=218) && (x<=250))
@@ -335,7 +335,7 @@ void setPressione()
 //            myGLCD.setFont(SmallFont);
 //            myGLCD.print("Changed!", 10, 110);
 //            myGLCD.setColor(0, 0, 0);
-//            myGLCD.setFont(BigFont);
+//            myGLCD.setFont(franklingothic_normal);
 //          }
 //        }
 //        t_temp.dow=calcDOW(t_temp.date, t_temp.mon, t_temp.year);
@@ -364,7 +364,7 @@ void setPressione()
 //            myGLCD.setFont(SmallFont);
 //            myGLCD.print("Changed!", 10, 110);
 //            myGLCD.setColor(0, 0, 0);
-//            myGLCD.setFont(BigFont);
+//            myGLCD.setFont(franklingothic_normal);
 //          }
 //        }
 //        else if ((x>=170) && (x<=202))
@@ -390,7 +390,7 @@ void setPressione()
 //            myGLCD.setFont(SmallFont);
 //            myGLCD.print("Changed!", 10, 110);
 //            myGLCD.setColor(0, 0, 0);
-//            myGLCD.setFont(BigFont);
+//            myGLCD.setFont(franklingothic_normal);
 //          }
 //        }
 //        else if ((x>=218) && (x<=250))
@@ -408,7 +408,7 @@ void setPressione()
 //            myGLCD.setFont(SmallFont);
 //            myGLCD.print("Changed!", 10, 110);
 //            myGLCD.setColor(0, 0, 0);
-//            myGLCD.setFont(BigFont);
+//            myGLCD.setFont(franklingothic_normal);
 //          }
 //        }
 //        t_temp.dow=calcDOW(t_temp.date, t_temp.mon, t_temp.year);

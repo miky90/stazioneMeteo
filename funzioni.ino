@@ -33,43 +33,110 @@ float calcolaPrevisione(int ora) {
   }
 }
 
-// void saveToSd() {
- // if(sdAviable) {
-   // res=file.openFile("BIGFILE.TXT", FILEMODE_TEXT_WRITE);
-    // if (res==NO_ERROR)
-    // {
-      // String stringa = rtc.getTimeStr();
-      // stringa += "t:";
-      // stringa += currStrTemp;
-      // stringa += "h:";
-      // stringa += currStrHum;
-      // stringa += "p:";
-      // stringa += currPress;
-      // char * buf;
-      // stringa.toCharArray(buf,stringa.length());
-      // file.writeLn(buf);
-      // file.closeFile();
-    // }
-    // else
-    // {
-      // switch(res)
-      // {
-        // case ERROR_ANOTHER_FILE_OPEN:
-          // Serial.println("** ERROR: Another file is already open...");
-          // break;
-        // default:
-          // Serial.print("** ERROR: ");
-          // Serial.println(res, HEX);
-          // break;
-      // }
-    // }
-  //Serial.println("***** All done... *****");
-  // }
-// }
+void saveToSd() {
+  if(sdAviable) {
+    String nomeFile =  rtc.getDateStr();
+	nomeFile.replace(".","");
+	char nome [8];
+	nomeFile.toCharArray(nome,8);
+    Serial.println(nome);
+    Serial.println(nomeFile);
+    if (!file.exists(nome))
+      file.create(nome);
+    byte res=file.openFile(nome, FILEMODE_TEXT_WRITE);
+     if (res==NO_ERROR)
+     {
+       String stringa = rtc.getTimeStr();
+       stringa.concat("t:");
+       stringa.concat(currStrTemp);
+       stringa.concat("h:");
+       stringa.concat(currStrHum);
+       stringa.concat("p:");
+       int intero = currPress;
+       int decimale = ((int)currPress*10)-intero;
+       stringa.concat(intero);
+       stringa.concat(".");
+       stringa.concat(decimale);
+       char * buf;
+       stringa.toCharArray(buf,stringa.length());
+       file.writeLn(buf);
+       file.closeFile();
+     }
+     else
+     {
+       switch(res)
+       {
+         case ERROR_ANOTHER_FILE_OPEN:
+           Serial.println("** ERROR: Another file is already open...");
+           break;
+         default:
+           Serial.print("** ERROR: ");
+           Serial.println(res, HEX);
+           break;
+       }
+     }
+  Serial.println("***** All done... *****");
+  }
+}
+
+void retriveFromSd() {
+  byte res;
+  word result;
+  char textBuffer[145];
+  String nomeFile =  rtc.getDateStr();
+  nomeFile.replace(".","");
+  char nome [8];
+  nomeFile.toCharArray(nome,8);
+  Serial.println(nome);
+  Serial.println(nomeFile);
+  if (file.exists(nome))
+  {  
+    res=file.openFile(nome, FILEMODE_TEXT_READ);
+    if (res==NO_ERROR)
+    {
+      result=0;
+      while ((result!=EOF) and (result!=FILE_IS_EMPTY))
+      {
+        result=file.readLn(textBuffer, 144);
+        if (result!=FILE_IS_EMPTY)
+        {
+          if (result==BUFFER_OVERFLOW)
+            Serial.print(textBuffer);
+          else
+            Serial.println(textBuffer);
+        }
+        else
+          Serial.println("** ERROR: File is empty...");
+      }
+      Serial.println();
+      file.closeFile();
+    }
+    else
+    {
+      switch(res)
+      {
+        case ERROR_ANOTHER_FILE_OPEN:
+          Serial.println("** ERROR: Another file is already open...");
+          break;
+        default:
+          Serial.print("** ERROR: ");
+          Serial.println(res, HEX);
+          break;
+      }
+    }
+  }
+  else
+    Serial.println("** ERROR: file does not exist...");
+    
+  Serial.println();
+  Serial.println();
+  Serial.println("***** All done... *****");
+}
 
 void storeData () {
   Serial.println("store data");
   storico.saveCurrent(currTemp, currHum, currPress);
+  saveToSd();
 }
 
 void recuperaDatiInterni() {
@@ -202,19 +269,6 @@ void touchInterface()
          myGLCD.drawRect(0,221, 319, 239);
          setClock();
       }
-      //      else if (((y>=184) && (y<=214)) && ((x>=15) && (x<=45)))        //clicco su indietro
-//      {
-//        myGLCD.setColor(255, 165, 0);
-//        myGLCD.drawRect(15,184, 45, 214);
-//        printMain();
-//      }
-//      else if (((y>=184) && (y<=214)) && ((x>=60) && (x<=184))) //clicco su settings
-//      {
-//        myGLCD.setColor(255, 165, 0);
-//        myGLCD.drawRect(60,184, 90, 214);
-//        //printSettings();
-//        setClock();
-//      }
     break;
     case 2:  // caso 2 schermata grafico pressione
       if (((y>=45) && (y<=75)) && ((x>=280) && (x<=310)))        //clicco su indietro
@@ -326,20 +380,14 @@ int nextInt(float num) {
     return (int)(num-0.5);
 }
 
-uint8_t* calcolaOrariSole() {
+void calcolaOrariSole() {
   if(!lcdActive);
     t = rtc.getTime();
   // The date on which you want to calculate astronomical events
   uint8_t day = t.date;
   uint8_t month = t.mon;
-  uint16_t year = t.year;
-  
-  // The array where will be saved variables of sunrise and sunset
-  // with the following form:
-  // timeArray[ Rise_hours, Rise_minutes, Set_hours, Set_minutes ]
-  // if you want you can use specially created index:
-  // SUNRISE_H SUNRISE_M SUNSET_H SUNSET_M
-  uint8_t* timeArray;
+  int millennio = ((int)(t.year/100))*100;
+  uint16_t year = t.year-millennio;
   
   // This functions are used to set your geographical coordinates of your location
   mySun.setPosition(myLatitude, myLongitude);
@@ -348,36 +396,33 @@ uint8_t* calcolaOrariSole() {
   boolean check = mySun.computeSR(timeArray, twilight_minutes, day, month, year);
   //return true if all the data entered are correct
 
-  if( check == true )
-  {
-    return timeArray;
-  }
-  else
+  if( !check == true )
     // Some parameter is incorrect and the function can not perform the calculation
-    Serial.println("Something wrong in function computeSR...please check your input parameteer");
+    Serial.println("Something wrong in function computeSR...please check your input parameters");
 }
 
-//char *verboseError(byte err)
-//{
-//	switch (err)
-//	{
-//	case ERROR_MBR_READ_ERROR:
-//		return "Error reading MBR";
-//		break;
-//	case ERROR_MBR_SIGNATURE:
-//		return "MBR Signature error";
-//		break;
-//	case ERROR_MBR_INVALID_FS:
-//		return "Unsupported filesystem";
-//		break;
-//	case ERROR_BOOTSEC_READ_ERROR:
-//		return "Error reading Boot Sector";
-//		break;
-//	case ERROR_BOOTSEC_SIGNATURE:
-//		return "Boot Sector Signature error";
-//		break;
-//	default:
-//		return "Unknown error";
-//		break;
-//	}
-//}
+char *verboseError(byte err)
+{
+	switch (err)
+	{
+	case ERROR_MBR_READ_ERROR:
+		return "Error reading MBR";
+		break;
+	case ERROR_MBR_SIGNATURE:
+		return "MBR Signature error";
+		break;
+	case ERROR_MBR_INVALID_FS:
+		return "Unsupported filesystem";
+		break;
+	case ERROR_BOOTSEC_READ_ERROR:
+		return "Error reading Boot Sector";
+		break;
+	case ERROR_BOOTSEC_SIGNATURE:
+		return "Boot Sector Signature error";
+		break;
+	default:
+		return "Unknown error";
+		break;
+	}
+}
+

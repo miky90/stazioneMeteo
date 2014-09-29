@@ -42,7 +42,8 @@
 //Fonts
 extern uint8_t BigFont[];
 extern uint8_t SmallFont[];
-extern uint8_t SevenSegNumFont[];
+extern uint8_t DotMatrix_M_Slash[];
+extern uint8_t franklingothic_normal[];
 
 //Image Files
 extern prog_uint16_t settings[0x384];
@@ -102,8 +103,7 @@ float currInHum=0.0;          //umidita corrente letta dal sensore interno
 float currInTemp=0.0;         //temperatura corrente letta dal sensoro interno 
 
 //Variabili SD
-//int sdAviable = 0;            //sd disponibile
-//byte res;                     //byte di ritorno lettura e crittura su file
+int sdAviable = 0;            //sd disponibile
 
 // Variabili orologio
 boolean puntini = true;
@@ -123,20 +123,28 @@ UTFT_tinyFAT myFiles(&myGLCD);
 SunLight mySun; // Declaration of the object
 // Setting the longitude of your location
 // Will be used to estimate the average Noon
-float myLongitude = 11.7863487; //selvazzano 
+float myLongitude = 11.79; //selvazzano 
 
 // Setting the latitude of your location
-float myLatitude = 45.3912659;
+float myLatitude = 45.39;
 
 // If you want to anticipate the sunrise and postpone the sunset.
 // Permits data beetween 0 and 60 and the unit of measurement is minutes
 uint8_t twilight_minutes = 0;
+// The array where will be saved variables of sunrise and sunset
+  // with the following form:
+  // timeArray[ Rise_hours, Rise_minutes, Set_hours, Set_minutes ]
+  // if you want you can use specially created index:
+  // SUNRISE_H SUNRISE_M SUNSET_H SUNSET_M
+uint8_t timeArray[4];
 
 void setup()
 {
   randomSeed(analogRead(0));
-  pinMode(53,OUTPUT);
+ 
+  pinMode(53,OUTPUT);        //Pin sd ss
   file.setSSpin(53);
+  
   pinMode(backlightPin,OUTPUT);    // inizialize the backlight pin as output
   backlightOff();                  // set initial state of backlight
   
@@ -150,9 +158,10 @@ void setup()
 
   cycleNum = (int)(STANBY_SEC/8-STANBY_SEC/95);
   wakeCount=(cycleNum-1);
+  
   //Setup the LCD
   myGLCD.InitLCD();
-  myGLCD.setFont(BigFont);
+  myGLCD.setFont(franklingothic_normal);
   myGLCD.clrScr();
   backlightOn();    //Accendo retroilluminazione
   myGLCD.print("LOADING...", CENTER, 110);
@@ -160,11 +169,19 @@ void setup()
   altitudine=readAltitude();
   //altitudine=30;
   
-  file.initFAT();
-  
   //inizializza comunicazione seriale
   Serial.begin(115200);
   Serial.println("REBOOT");
+  
+  //Setup SD
+  byte res = file.initFAT();
+  if (res==NO_ERROR)
+    sdAviable=1;
+  else {
+    Serial.print("***** ERROR: ");
+    Serial.println(verboseError(res));
+  }
+    
   
   //Setup TouchScreen
   myTouch.InitTouch();
@@ -175,11 +192,6 @@ void setup()
   
   //setup DHT
   dht.setup(45);
-  
-  //Setup SD
-  //pinMode(53,OUTPUT);
-  //file.setSSpin(53);
-  //file.initFAT();
   
   //Setup NRF24 Wifi board
   if (!nrf24.init())
@@ -196,6 +208,8 @@ void setup()
     oldDataSaved.hour=23;
   else
     oldDataSaved.hour=t.hour-1;
+  
+  retriveFromSd();
   
   aggiornaDati();
   printMain();      //paint schermata iniziale

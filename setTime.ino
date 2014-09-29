@@ -129,7 +129,7 @@ void setClock()
   waitForTouchRelease();    
   
   //myGLCD.clrScr();
-  myGLCD.setFont(BigFont);
+  myGLCD.setFont(franklingothic_normal);
   
   myGLCD.setColor(255, 255, 255); //Bianco
   myGLCD.fillRect(0, 0, 319, 239);
@@ -273,7 +273,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         else if ((x>=170) && (x<=202))
@@ -298,7 +298,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         else if ((x>=218) && (x<=250))
@@ -323,7 +323,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
       }
@@ -351,7 +351,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         else if ((x>=170) && (x<=202))
@@ -376,7 +376,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         else if ((x>=218) && (x<=250))
@@ -401,7 +401,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 10);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
       }
@@ -428,7 +428,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         else if ((x>=170) && (x<=202))
@@ -454,7 +454,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         else if ((x>=218) && (x<=250))
@@ -472,7 +472,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         t_temp.dow=calcDOW(t_temp.date, t_temp.mon, t_temp.year);
@@ -501,7 +501,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         else if ((x>=170) && (x<=202))
@@ -527,7 +527,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         else if ((x>=218) && (x<=250))
@@ -545,7 +545,7 @@ void setClock()
             myGLCD.setFont(SmallFont);
             myGLCD.print("Changed!", 10, 110);
             myGLCD.setColor(0, 0, 0);
-            myGLCD.setFont(BigFont);
+            myGLCD.setFont(franklingothic_normal);
           }
         }
         t_temp.dow=calcDOW(t_temp.date, t_temp.mon, t_temp.year);
