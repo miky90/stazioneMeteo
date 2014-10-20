@@ -13,6 +13,21 @@ void printError(int id){
   }
 }
 
+void printTopBar() {
+   myGLCD.setFont(franklingothic_normal);
+  //Titolo
+  myGLCD.setColor(255, 165, 0); //Arancione
+  myGLCD.fillRect(0, 0, 319, 20);
+  myGLCD.setColor(255, 255, 255); //Bianco
+  myGLCD.setBackColor(255, 165, 0); //Arancione
+  myGLCD.print("METEO", CENTER, 1);
+  if(!sdAviable){
+    myGLCD.setColor(100, 100, 100); //Bianco
+    myGLCD.setBackColor(255, 95, 0); //Arancione
+  }
+  myGLCD.print("SD",RIGHT,1);
+}
+
 void flashPrevision(){
   if(schermata==2) {
     if(flashBar) {
@@ -192,13 +207,7 @@ void printMain() {
   schermata=1;
   calcolaOrariSole();
   //LAYOUT
-  myGLCD.setFont(franklingothic_normal);
-  //Titolo
-  myGLCD.setColor(255, 165, 0); //Arancione
-  myGLCD.fillRect(0, 0, 319, 20);
-  myGLCD.setColor(255, 255, 255); //Bianco
-  myGLCD.setBackColor(255, 165, 0); //Arancione
-  myGLCD.print("METEO", CENTER, 1);
+  printTopBar();
 
   //2 riga
   myGLCD.setFont(franklingothic_normal);
@@ -258,7 +267,19 @@ void printMain() {
     myGLCD.printNumF(currPress,1,100,192);
     myGLCD.print("hPa",196,192);
   }
-
+  
+  //alba
+  myGLCD.setFont(SmallFont);
+  myGLCD.print("a: ",236,140);
+  myGLCD.printNumI(timeArray[SUNRISE_H],260,140,2);
+  myGLCD.print(":",276,140);
+  myGLCD.printNumI(timeArray[SUNRISE_M],284,140,2);
+  //tramonto
+  myGLCD.print("t: ",236,156);
+  myGLCD.printNumI(timeArray[SUNSET_H],260,156,2);
+  myGLCD.print(":",276,156);
+  myGLCD.printNumI(timeArray[SUNSET_M],284,156,2);
+  
   //immagine meteo
   printImageMeteo(2,currPress);
 }
@@ -282,25 +303,27 @@ void printImageMeteo(int colonna, float pressione) // '0' = -1h, '1' = ora, '2' 
     int index=0;
     if(pressione>=1016)
     {
-      if((t.hour<timeArray[SUNSET_H]) && (t.hour>timeArray[SUNRISE_H]))
+      if(isDayTime())
         index=0;
       else
         index=3;
     }
     else if(pressione>=1009 & pressione<1016)
     {
-      if((t.hour<timeArray[SUNSET_H]) && (t.hour>timeArray[SUNRISE_H]))
+      if(isDayTime())
         index=1;
       else
         index=4;
     }
-    else if(pressione<1009) {
+    else if(pressione<1009) 
+    {
       if(currTemp>1.0)
         index = 2;
       else
         index = 5;
     }
-    if(sdAviable) {
+    Serial.print(index);
+    if( (sdAviable) && (file.exists(images[index])) ) {
       if(colonna==0) //-1h
         res = myFiles.loadBitmap(18, 45, 90, 90, images[index]);
       //myGLCD.drawBitmap(18,45,90,90,immagine);

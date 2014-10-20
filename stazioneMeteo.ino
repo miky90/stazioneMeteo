@@ -53,6 +53,14 @@ extern unsigned int arrow[0x384];
 //extern prog_uint16_t neve[0x1FA4];
 
 char* images[]={"MET0.RAW", "MET1.RAW", "MET2.RAW", "MET3.RAW", "MET4.RAW", "MET5.RAW" };
+/*
+     MET0.RAW --- sereno         giorno
+     MET1.RAW --- poco nuvoloso  giorno
+     MET2.RAW --- pioggia debole giorno
+     MET3.RAW --- sereno         notte
+     MET4.RAW --- poco nuvoloso  notte
+     MET5.RAW --- pioggia debole notte
+*/
 
 //VARIABILI
 //set pin numbers:
@@ -60,7 +68,7 @@ const int buttonPin = 18;     // the number of the pushbutton pin /Interrupt 5
 const int backlightPin = 9;   // number of backlight tft pin
 const int wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4    
 
-//volatile boolean dataAviable = false;
+//volatile boolean dataAviable = false; 
 int wakeCount =0;
 int cycleNum;
 #define STANBY_SEC 300
@@ -90,7 +98,7 @@ float secAggWifi = 0.0;       //secondi dall'ultimo aggiornamento dei dati meteo
 boolean firstConnection=true; //prima connessione con stazione esterna
 boolean errorConnection=false; //errore nella connessione della stazione esterna
 double altitudine;
-float currPress=0.0;              //pressione corrente letta dai sensori esterni 
+float currPress=0.0;          //pressione corrente letta dai sensori esterni 
 char* currStrHum="--";        //stringa umidità corrente  
 float currHum = 0.0;          //umidita corrente letta dai sensori esterni 
 char* currStrTemp="--.-";     //stringa temperatura corrente
@@ -123,14 +131,14 @@ UTFT_tinyFAT myFiles(&myGLCD);
 SunLight mySun; // Declaration of the object
 // Setting the longitude of your location
 // Will be used to estimate the average Noon
-float myLongitude = 11.79; //selvazzano 
+float myLongitude = 11.80; //selvazzano 
 
 // Setting the latitude of your location
 float myLatitude = 45.39;
 
 // If you want to anticipate the sunrise and postpone the sunset.
 // Permits data beetween 0 and 60 and the unit of measurement is minutes
-uint8_t twilight_minutes = 0;
+uint8_t twilight_minutes = 10;
 // The array where will be saved variables of sunrise and sunset
   // with the following form:
   // timeArray[ Rise_hours, Rise_minutes, Set_hours, Set_minutes ]
@@ -157,7 +165,7 @@ void setup()
                                       // wakeUpNow when pin 4 goes from low to high 
 
   cycleNum = (int)(STANBY_SEC/8-STANBY_SEC/95);
-  wakeCount=(cycleNum-1);
+  wakeCount=0;
   
   //Setup the LCD
   myGLCD.InitLCD();
@@ -171,17 +179,19 @@ void setup()
   
   //inizializza comunicazione seriale
   Serial.begin(115200);
-  Serial.println("REBOOT");
+  Serial.println("***** REBOOT... *****");
+  Serial.println("");
   
   //Setup SD
   byte res = file.initFAT();
-  if (res==NO_ERROR)
+  if (res==NO_ERROR) {
     sdAviable=1;
+    Serial.println("SD correctly inizialized");
+  }
   else {
     Serial.print("***** ERROR: ");
     Serial.println(verboseError(res));
   }
-    
   
   //Setup TouchScreen
   myTouch.InitTouch();
@@ -210,6 +220,7 @@ void setup()
     oldDataSaved.hour=t.hour-1;
   
   retriveFromSd();
+  printListFile();
   
   aggiornaDati();
   printMain();      //paint schermata iniziale
@@ -333,8 +344,7 @@ void sleepNow()         // here we put the arduino to sleep
     
     attachInterrupt(5, wakeUpNowButton, RISING); // use interrupt 5 (pin 18) and run function
                                       // wakeUpNow when pin 5 goes from low to high 
-    //attachInterrupt(4, wakeUpNowWifi, RISING); // use interrupt 4 (pin 19) and run function
-                                      // wakeUpNow when pin 4 goes from low to high 
+    //attachInterrupt(4, wakeUpNowWifi, RISING); // use interrupt 4 (pin 19) and run function                     
     wdt_reset();
     myWatchdogEnable();
     Serial.println("...going to sleep.");

@@ -34,11 +34,13 @@ float calcolaPrevisione(int ora) {
 }
 
 void saveToSd() {
+  Serial.println("save to SD");
   if(sdAviable) {
     String nomeFile =  rtc.getDateStr();
-	nomeFile.replace(".","");
-	char nome [8];
-	nomeFile.toCharArray(nome,8);
+    nomeFile.replace(".","");
+    nomeFile.concat(".TXT");
+    char nome [13];
+    nomeFile.toCharArray(nome,13);
     Serial.println(nome);
     Serial.println(nomeFile);
     if (!file.exists(nome))
@@ -53,14 +55,17 @@ void saveToSd() {
        stringa.concat(currStrHum);
        stringa.concat("p:");
        int intero = currPress;
-       int decimale = ((int)currPress*10)-intero;
+       int decimale = ((int)(currPress*10))-intero;
        stringa.concat(intero);
        stringa.concat(".");
        stringa.concat(decimale);
-       char * buf;
-       stringa.toCharArray(buf,stringa.length());
+       char * buf = new char[27];
+       Serial.println(stringa);
+       stringa.toCharArray(buf,27);
+       Serial.println(buf);
        file.writeLn(buf);
        file.closeFile();
+       delete buf;
      }
      else
      {
@@ -71,45 +76,80 @@ void saveToSd() {
            break;
          default:
            Serial.print("** ERROR: ");
-           Serial.println(res, HEX);
+           Serial.println(res,HEX);
            break;
        }
      }
-  Serial.println("***** All done... *****");
   }
 }
 
 void retriveFromSd() {
+  Serial.println("retrive from SD");
   byte res;
   word result;
-  char textBuffer[145];
+  char textBuffer[27];
   String nomeFile =  rtc.getDateStr();
   nomeFile.replace(".","");
-  char nome [8];
-  nomeFile.toCharArray(nome,8);
+  nomeFile.concat(".TXT");
+  char nome [nomeFile.length()+1];
+  nomeFile.toCharArray(nome,nomeFile.length()+1);
   Serial.println(nome);
-  Serial.println(nomeFile);
   if (file.exists(nome))
   {  
     res=file.openFile(nome, FILEMODE_TEXT_READ);
     if (res==NO_ERROR)
     {
+      int maxHour = -1;
       result=0;
       while ((result!=EOF) and (result!=FILE_IS_EMPTY))
       {
-        result=file.readLn(textBuffer, 144);
+        result=file.readLn(textBuffer, 27);
         if (result!=FILE_IS_EMPTY)
         {
-          if (result==BUFFER_OVERFLOW)
+          if (result==BUFFER_OVERFLOW) {
             Serial.print(textBuffer);
-          else
+          }
+          else{
             Serial.println(textBuffer);
+            
+            char cOra[] = {textBuffer[0], textBuffer[1]};
+            Serial.print(textBuffer[0]);
+            Serial.println(textBuffer[1]);
+            Serial.println(cOra);
+            int ora = atoi(cOra);
+            Serial.print("ora: ");
+            Serial.println(ora);
+            if(maxHour<ora){
+              maxHour=ora;
+     
+              char cTemp[] = {textBuffer[10], textBuffer[11], textBuffer[12], textBuffer[13]};
+              float tTemp = atof(cTemp);
+              
+            
+              char cHum[] = {textBuffer[16], textBuffer[17]};
+              int tHum = atoi(cHum);
+         
+              char cPress[] = {textBuffer[20], textBuffer[21], textBuffer[22], textBuffer[23], textBuffer[24], textBuffer[25]};
+              float tPress = atof(cPress);
+              storico.saveCurrent(tTemp, tHum, tPress);
+            }
+            
+          }
         }
         else
           Serial.println("** ERROR: File is empty...");
       }
       Serial.println();
       file.closeFile();
+      int diffHour = t.hour - maxHour;
+      if(diffHour)
+        for(int i=0;i<diffHour;i++)
+          storico.saveCurrent(0, 0, 0);
+      else {
+          currPress=storico.getPress();
+          currTemp=storico.getTemp();
+          currHum=storico.getHum();
+      }
     }
     else
     {
@@ -120,17 +160,13 @@ void retriveFromSd() {
           break;
         default:
           Serial.print("** ERROR: ");
-          Serial.println(res, HEX);
+          Serial.println(res,HEX);
           break;
       }
     }
   }
   else
     Serial.println("** ERROR: file does not exist...");
-    
-  Serial.println();
-  Serial.println();
-  Serial.println("***** All done... *****");
 }
 
 void storeData () {
@@ -395,10 +431,12 @@ void calcolaOrariSole() {
   // This is the function that allows you to calculate sunrise and sunset
   boolean check = mySun.computeSR(timeArray, twilight_minutes, day, month, year);
   //return true if all the data entered are correct
-
+  
   if( !check == true )
     // Some parameter is incorrect and the function can not perform the calculation
     Serial.println("Something wrong in function computeSR...please check your input parameters");
+  timeArray[SUNSET_H]++;
+  timeArray[SUNRISE_H]++;
 }
 
 char *verboseError(byte err)
@@ -425,4 +463,85 @@ char *verboseError(byte err)
 		break;
 	}
 }
+void printListFile() {
+      byte res;
+      Serial.println("Listing Files...");
+      res = file.findFirstFile(&file.DE);
+      if (res==NO_ERROR)
+      {
+        Serial.print(file.DE.filename);
+        Serial.print(".");
+        Serial.print(file.DE.fileext);
+        Serial.print("   ");
+        printTime(file.DE.time>>11, ((file.DE.time>>5) & B00111111));
+        Serial.print("   Size: ");
+        hexPrintLong(file.DE.fileSize);
+      }
+      else
+      {
+        Serial.println("No files found...");
+      }
+      while (res==NO_ERROR)
+      {
+        res = file.findNextFile(&file.DE);
+        if (res==NO_ERROR)
+        {
+          Serial.print(file.DE.filename);
+          Serial.print(".");
+          Serial.print(file.DE.fileext);
+          Serial.print("   ");
+          printTime(file.DE.time>>11, ((file.DE.time>>5) & B00111111));
+          Serial.print("   Size: ");
+          hexPrintLong(file.DE.fileSize);
+        }
+      }
+      Serial.println(); 
+}
 
+void hexPrintLong(unsigned long val)
+{
+  Serial.print("0x");
+  if (val < 0x10000000)
+    Serial.print("0");
+  if (val < 0x1000000)
+    Serial.print("0");
+  if (val < 0x100000)
+    Serial.print("0");
+  if (val < 0x10000)
+    Serial.print("0");
+  if (val < 0x1000)
+    Serial.print("0");
+  if (val < 0x100)
+    Serial.print("0");
+  if (val < 0x10)
+    Serial.print("0");
+  Serial.print(val, HEX);
+  Serial.print(" [");
+  Serial.print(val, DEC);
+  Serial.println("] ");
+}
+
+void printTime(byte h, byte m)
+{
+  if (h<10)
+    Serial.print("0");
+  Serial.print(h, DEC);
+  Serial.print(":");
+  if (m<10)
+    Serial.print("0");
+  Serial.print(m, DEC);
+}
+
+boolean isDayTime() {
+  Time sunset;
+  Time sunrise;
+  sunset.hour = timeArray[SUNSET_H];
+  sunset.min = timeArray[SUNSET_M];
+  sunrise.hour = timeArray[SUNRISE_H];
+  sunrise.min = timeArray[SUNSET_M];
+  
+  if( (t < sunset) && (t > sunrise) )
+      return true;
+  else
+      return false;  
+}
