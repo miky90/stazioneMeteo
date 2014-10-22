@@ -47,11 +47,7 @@ extern uint8_t franklingothic_normal[];
 
 //Image Files
 extern prog_uint16_t settings[0x384];
-extern unsigned int arrow[0x384];
-//extern unsigned int serenonotte[0x1FA4];
-//extern prog_uint16_t poconuvnotte[0x1FA4];
-//extern prog_uint16_t neve[0x1FA4];
-
+extern prog_uint16_t arrow[0x384];
 char* images[]={"MET0.RAW", "MET1.RAW", "MET2.RAW", "MET3.RAW", "MET4.RAW", "MET5.RAW" };
 /*
      MET0.RAW --- sereno         giorno
@@ -64,11 +60,10 @@ char* images[]={"MET0.RAW", "MET1.RAW", "MET2.RAW", "MET3.RAW", "MET4.RAW", "MET
 
 //VARIABILI
 //set pin numbers:
-const int buttonPin = 18;     // the number of the pushbutton pin /Interrupt 5
-const int backlightPin = 9;   // number of backlight tft pin
-const int wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4    
+const uint8_t buttonPin = 18;     // the number of the pushbutton pin /Interrupt 5
+const uint8_t backlightPin = 9;   // number of backlight tft pin
+const uint8_t wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4    
 
-//volatile boolean dataAviable = false; 
 int wakeCount =0;
 int cycleNum;
 #define STANBY_SEC 300
@@ -77,14 +72,14 @@ int cycleNum;
 //0,1 altitudine  
 
 //richiesta di wakeUp 
-volatile int wakeStatus = 0;  // variable to store a request for wakeUp
+volatile uint8_t wakeStatus = 0;  // variable to store a request for wakeUp
                               // 1 - wifi
                               // 2 - button
 //parametri interfaccia
 boolean buttonState = false;  //stato del pulsante true = premuto
 boolean lcdActive = true;     //diventa false dopo un minuto di inattività
 int inattivita = 0;           //tempo di inattività
-int schermata = 0;            /*! 1 - Situazione Attuale
+uint8_t schermata = 0;            /*! 1 - Situazione Attuale
                                *  2 - Grafico pressione
                                *  3 - Schermata esterno
                                */                               
@@ -98,7 +93,7 @@ float secAggWifi = 0.0;       //secondi dall'ultimo aggiornamento dei dati meteo
 boolean firstConnection=true; //prima connessione con stazione esterna
 boolean errorConnection=false; //errore nella connessione della stazione esterna
 double altitudine;
-float currPress=0.0;          //pressione corrente letta dai sensori esterni 
+float currPress= 0.0;          //pressione corrente letta dai sensori esterni 
 char* currStrHum="--";        //stringa umidità corrente  
 float currHum = 0.0;          //umidita corrente letta dai sensori esterni 
 char* currStrTemp="--.-";     //stringa temperatura corrente
@@ -111,7 +106,7 @@ float currInHum=0.0;          //umidita corrente letta dal sensore interno
 float currInTemp=0.0;         //temperatura corrente letta dal sensoro interno 
 
 //Variabili SD
-int sdAviable = 0;            //sd disponibile
+uint8_t sdAviable = 0;            //sd disponibile
 
 // Variabili orologio
 boolean puntini = true;
@@ -183,7 +178,7 @@ void setup()
   Serial.println("");
   
   //Setup SD
-  byte res = file.initFAT();
+  byte res = file.initFAT(SPISPEED_VERYHIGH);
   if (res==NO_ERROR) {
     sdAviable=1;
     Serial.println("SD correctly inizialized");

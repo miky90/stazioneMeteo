@@ -12,7 +12,7 @@ void aggiornaDati() {
 
 
 
-float calcolaPrevisione(int ora) {
+float calcolaPrevisione(uint8_t ora) {
   if(ora==1) {
     if(storico.getPress(-2)==0)
       return 0;
@@ -195,19 +195,19 @@ void recuperaDati() {
   if (nrf24.recv(buf, &len)) {
     bufferWifi=(char*)buf;
     currPress=sealevel(getPressione(bufferWifi),altitudine);
-    float tempWifi=getTemp(bufferWifi);
-    float humWifi= getHum(bufferWifi);
-    if((currStrTemp!= "--.-") && (currStrHum != "--") && (currPress!=0)) {
-      currTemp=tempWifi;
-      currHum=humWifi;
-    }
-    else {
-      currTemp=0;
-      currStrTemp= "--.-";
-      currHum=0;
-      currStrHum = "--";
-    }
-    
+    currTemp=getTemp(bufferWifi);
+    currHum= getHum(bufferWifi);
+//    if((currStrTemp!= "--.-") && (currStrHum != "--") && (currPress!=0)) {
+//      currTemp=tempWifi;
+//      Serial.print(currTemp);
+//      currHum=humWifi;
+//    }
+//    else {
+//      currTemp=0;
+//      currStrTemp= "--.-";
+//      currHum=0;
+//      currStrHum = "--";
+//    }
     nrf24.setModeIdle();   //Moallità risparmio energetico wifi
   }
   if(!lcdActive);
@@ -229,7 +229,7 @@ float getPressione(char* buff)
   if(buff[0]=='p' && buff[1]>='0' && buff[1]<='9') 
   {
     char pr[7];
-    for(int i=0;i<7;i++) {
+    for(uint8_t i=0;i<7;i++) {
       pr[i]=buff[i+1];
     }
     pr[6]='\0';
@@ -242,7 +242,7 @@ float getTemp(char* buff)
 {
   if(buff[14]=='t' && buff[15]>='0' && buff[15]<='9') 
   {
-    for(int i=15;i<19;i++)
+    for(uint8_t i=15;i<19;i++)
       currStrTemp[i-15]=buff[i];
     currStrTemp[4]='\0';
     return atof(currStrTemp);
@@ -256,7 +256,7 @@ float getHum(char* buff)
 {
   if(buff[8]=='u'&& buff[9]>='0' && buff[9]<='9') 
   {
-    for(int i=9;i<11;i++)
+    for(uint8_t i=9;i<11;i++)
       currStrHum[i-9]=buff[i];
     currStrHum[2]='\0';
     return atof(currStrHum);
@@ -533,15 +533,30 @@ void printTime(byte h, byte m)
 }
 
 boolean isDayTime() {
+  Serial.println("isDaytime");
   Time sunset;
   Time sunrise;
   sunset.hour = timeArray[SUNSET_H];
   sunset.min = timeArray[SUNSET_M];
+  sunset.sec = 0;
   sunrise.hour = timeArray[SUNRISE_H];
   sunrise.min = timeArray[SUNSET_M];
+  sunrise.sec = 0;
   
-  if( (t < sunset) && (t > sunrise) )
+  if( (getTime(t) < getTime(sunset)) && (getTime(t) > getTime(sunrise)) )
       return true;
   else
       return false;  
+      
+  //Serial.println(now());
+  //Serial.println(getTime(sunset));
+  //Serial.println(getTime(sunrise));
+}
+
+unsigned long getTime(const Time& _time) {
+    unsigned long secondi; 
+    secondi = ((unsigned long)_time.hour) * 3600;
+    secondi += ((unsigned long)_time.min) * 60;
+    secondi += _time.sec;
+    return secondi;
 }

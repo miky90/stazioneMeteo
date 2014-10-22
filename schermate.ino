@@ -1,5 +1,5 @@
 // FUNZIONI *****************************************************************//
-void printError(int id){
+void printError(uint8_t id){
   switch(id) {
   case 0 : 
     errorConnection=true;
@@ -284,23 +284,13 @@ void printMain() {
   printImageMeteo(2,currPress);
 }
 
-void printImageMeteo(int colonna, float pressione) // '0' = -1h, '1' = ora, '2' = +1h  
+void printImageMeteo(uint8_t colonna, float pressione) // '0' = -1h, '1' = ora, '2' = +1h  
 { 
-  //Serial.print("SunRise:");
-  //Serial.print(timeArray[SUNRISE_H]);
-  //Serial.print(":");
-  //Serial.println(timeArray[SUNRISE_M]);
-  //Serial.print("SunSet:");
-  //Serial.print(timeArray[SUNSET_H]);
-  //Serial.print(":");
-  //Serial.println(timeArray[SUNSET_M]);
-  // if you want you can use specially created index:
-  // SUNRISE_H SUNRISE_M SUNSET_H SUNSET_M
   word res;
   myGLCD.setFont(franklingothic_normal);
   if(pressione!=0) 
   {
-    int index=0;
+    uint8_t index=0;
     if(pressione>=1016)
     {
       if(isDayTime())
@@ -317,12 +307,12 @@ void printImageMeteo(int colonna, float pressione) // '0' = -1h, '1' = ora, '2' 
     }
     else if(pressione<1009) 
     {
+      Serial.print(currTemp);
       if(currTemp>1.0)
         index = 2;
       else
         index = 5;
     }
-    Serial.print(index);
     if( (sdAviable) && (file.exists(images[index])) ) {
       if(colonna==0) //-1h
         res = myFiles.loadBitmap(18, 45, 90, 90, images[index]);
@@ -375,7 +365,8 @@ void printImageMeteo(int colonna, float pressione) // '0' = -1h, '1' = ora, '2' 
 
 void printDataOra(boolean ristampa) {
   t = rtc.getTime();
-  int giorno, mese, anno, ore, minuti;
+  uint8_t giorno, mese, ore, minuti;
+  uint16_t anno;
   minuti = t.min;
   if(ristampa|oldMin!=minuti) {
     //stampa data ora utlima riga
@@ -543,11 +534,11 @@ void grafico () {
   printDataOra(true);
 }
 
-void drawEmptyBar(int ora) {
+void drawEmptyBar(uint8_t ora) {
   int pressione = maxScala;
-  int x = 50;
-  int y = 190;
-  int colonna;
+  uint8_t x = 50;
+  uint8_t y = 190;
+  uint8_t colonna;
   switch (ora) {
   case -24: 
     colonna = 0; 
@@ -574,7 +565,7 @@ void drawEmptyBar(int ora) {
   x = 50 + 32*colonna;
   int altezza = pressione - (maxScala - 20);
   myGLCD.setColor(255,255,255);
-  int k=0;
+  //int k=0;
   for(int i=0; i<altezza; i++) {
     if((i%5==0) & (i!=0))
       y-=2;
@@ -582,11 +573,11 @@ void drawEmptyBar(int ora) {
   }
 }
 
-void drawPressBar(int ora, float tPressione) {
+void drawPressBar(uint8_t ora, float tPressione) {
   int pressione = nextInt(tPressione);
-  int x = 50;
-  int y = 190;
-  int colonna;
+  uint8_t x = 50;
+  uint8_t y = 190;
+  uint8_t colonna;
   switch (ora) {
   case -24: 
     colonna = 0; 
@@ -622,7 +613,7 @@ void drawPressBar(int ora, float tPressione) {
     }
     else
       myGLCD.setColor(150,150,150);
-    int k=0;
+    //int k=0;
     for(int i=0; i<altezza; i++) {
       if((i%5==0) & (i!=0))
         y-=2;
