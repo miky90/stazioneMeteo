@@ -1,3 +1,6 @@
+/* descrizione: funzione per aggiornamento dei valori interni letti dai sensori 
+ *              ed esterni se presenti nel buffer wifi.
+ */
 void aggiornaDati() {
   Serial.println("func. aggiorno dati");
   while (nrf24.available()) 
@@ -10,8 +13,9 @@ void aggiornaDati() {
 //      printMeteoAttuale();
 }
 
-
-
+/* descrizione: funzione per il calcolo delle previsioni;
+ * param[in] ora: valore 1 o 2.
+ */ 
 float calcolaPrevisione(uint8_t ora) {
   if(ora==1) {
     if(storico.getPress(-2)==0)
@@ -33,9 +37,12 @@ float calcolaPrevisione(uint8_t ora) {
   }
 }
 
+/* descrizione: funzione per il salvataggio dei valori attuali letti dai sensori esterni
+ *              in un file testuale con nome GGMMAAAA.TXT su sd.
+ */
 void saveToSd() {
   Serial.println("save to SD");
-  if(sdAviable) {
+  if(sdAviable && storicoToSd) {
     String nomeFile =  rtc.getDateStr();
     nomeFile.replace(".","");
     nomeFile.concat(".TXT");
@@ -83,98 +90,106 @@ void saveToSd() {
   }
 }
 
+/* descrizione: recupera valori salvati su sd.
+ */
 void retriveFromSd() {
   Serial.println("retrive from SD");
-  byte res;
-  word result;
-  char textBuffer[27];
-  String nomeFile =  rtc.getDateStr();
-  nomeFile.replace(".","");
-  nomeFile.concat(".TXT");
-  char nome [nomeFile.length()+1];
-  nomeFile.toCharArray(nome,nomeFile.length()+1);
-  Serial.println(nome);
-  if (file.exists(nome))
-  {  
-    res=file.openFile(nome, FILEMODE_TEXT_READ);
-    if (res==NO_ERROR)
-    {
-      int maxHour = -1;
-      result=0;
-      while ((result!=EOF) and (result!=FILE_IS_EMPTY))
+  if(sdAviable && storicoToSd) {
+    byte res;
+    word result;
+    char textBuffer[27];
+    String nomeFile =  rtc.getDateStr();
+    nomeFile.replace(".","");
+    nomeFile.concat(".TXT");
+    char nome [nomeFile.length()+1];
+    nomeFile.toCharArray(nome,nomeFile.length()+1);
+    Serial.println(nome);
+    if (file.exists(nome))
+    {  
+      res=file.openFile(nome, FILEMODE_TEXT_READ);
+      if (res==NO_ERROR)
       {
-        result=file.readLn(textBuffer, 27);
-        if (result!=FILE_IS_EMPTY)
+        int maxHour = -1;
+        result=0;
+        while ((result!=EOF) and (result!=FILE_IS_EMPTY))
         {
-          if (result==BUFFER_OVERFLOW) {
-            Serial.print(textBuffer);
-          }
-          else{
-            Serial.println(textBuffer);
-            
-            char cOra[] = {textBuffer[0], textBuffer[1]};
-            Serial.print(textBuffer[0]);
-            Serial.println(textBuffer[1]);
-            Serial.println(cOra);
-            int ora = atoi(cOra);
-            Serial.print("ora: ");
-            Serial.println(ora);
-            if(maxHour<ora){
-              maxHour=ora;
-     
-              char cTemp[] = {textBuffer[10], textBuffer[11], textBuffer[12], textBuffer[13]};
-              float tTemp = atof(cTemp);
-              
-            
-              char cHum[] = {textBuffer[16], textBuffer[17]};
-              int tHum = atoi(cHum);
-         
-              char cPress[] = {textBuffer[20], textBuffer[21], textBuffer[22], textBuffer[23], textBuffer[24], textBuffer[25]};
-              float tPress = atof(cPress);
-              storico.saveCurrent(tTemp, tHum, tPress);
+          result=file.readLn(textBuffer, 27);
+          if (result!=FILE_IS_EMPTY)
+          {
+            if (result==BUFFER_OVERFLOW) {
+              Serial.print(textBuffer);
             }
-            
+            else{
+              Serial.println(textBuffer);
+              
+              char cOra[] = {textBuffer[0], textBuffer[1]};
+              Serial.print(textBuffer[0]);
+              Serial.println(textBuffer[1]);
+              Serial.println(cOra);
+              int ora = atoi(cOra);
+              Serial.print("ora: ");
+              Serial.println(ora);
+              if(maxHour<ora){
+                maxHour=ora;
+       
+                char cTemp[] = {textBuffer[10], textBuffer[11], textBuffer[12], textBuffer[13]};
+                float tTemp = atof(cTemp);
+                
+              
+                char cHum[] = {textBuffer[16], textBuffer[17]};
+                int tHum = atoi(cHum);
+           
+                char cPress[] = {textBuffer[20], textBuffer[21], textBuffer[22], textBuffer[23], textBuffer[24], textBuffer[25]};
+                float tPress = atof(cPress);
+                storico.saveCurrent(tTemp, tHum, tPress);
+              }
+              
+            }
           }
+          else
+            Serial.println("** ERROR: File is empty...");
         }
-        else
-          Serial.println("** ERROR: File is empty...");
+        Serial.println();
+        file.closeFile();
+        int diffHour = t.hour - maxHour;
+        if(diffHour)
+          for(int i=0;i<diffHour;i++)
+            storico.saveCurrent(0, 0, 0);
+        else {
+            currPress=storico.getPress();
+            currTemp=storico.getTemp();
+            currHum=storico.getHum();
+        }
       }
-      Serial.println();
-      file.closeFile();
-      int diffHour = t.hour - maxHour;
-      if(diffHour)
-        for(int i=0;i<diffHour;i++)
-          storico.saveCurrent(0, 0, 0);
-      else {
-          currPress=storico.getPress();
-          currTemp=storico.getTemp();
-          currHum=storico.getHum();
+      else
+      {
+        switch(res)
+        {
+          case ERROR_ANOTHER_FILE_OPEN:
+            Serial.println("** ERROR: Another file is already open...");
+            break;
+          default:
+            Serial.print("** ERROR: ");
+            Serial.println(res,HEX);
+            break;
+        }
       }
     }
     else
-    {
-      switch(res)
-      {
-        case ERROR_ANOTHER_FILE_OPEN:
-          Serial.println("** ERROR: Another file is already open...");
-          break;
-        default:
-          Serial.print("** ERROR: ");
-          Serial.println(res,HEX);
-          break;
-      }
-    }
+      Serial.println("** ERROR: file does not exist...");
   }
-  else
-    Serial.println("** ERROR: file does not exist...");
 }
 
+/* descrizione: salva i dati attuali nello storico e su sd.
+ */
 void storeData () {
   Serial.println("store data");
   storico.saveCurrent(currTemp, currHum, currPress);
   saveToSd();
 }
 
+/* descrizione: funzione che recupera i valori dal sensore interno.
+ */
 void recuperaDatiInterni() {
   Serial.println("aggiorno dati interni");
   delay(dht.getMinimumSamplingPeriod());
@@ -182,10 +197,14 @@ void recuperaDatiInterni() {
   currInTemp = dht.getTemperature();
 }
 
+/* descrizione: funzione aggiornarna la data o l'ora solo se necessario
+ */
 void checkDataOra() {
    printDataOra(false); 
 }
 
+/* descrizione: funzione che recupera i dati letti dal sensore esterno dal buffer wifi.
+ */
 void recuperaDati() {
   Serial.println("aggiorno dati esterni");
   char* bufferWifi;
@@ -210,6 +229,8 @@ void recuperaDati() {
 //    }
     nrf24.setModeIdle();   //Moallità risparmio energetico wifi
   }
+  //rendo reattiva la grafica
+  touchInterface();
   if(!lcdActive);
     t = rtc.getTime();
   printSerialTime(t);
@@ -224,6 +245,10 @@ void recuperaDati() {
       oldDataSaved=t;
     }
 }
+
+/* descrizione: funzione recupera la pressione dal buffer wifi e ne ritorna il valore float;
+ * param[in] buff: puntatore al buffer wifi.
+ */
 float getPressione(char* buff) 
 {
   if(buff[0]=='p' && buff[1]>='0' && buff[1]<='9') 
@@ -238,6 +263,11 @@ float getPressione(char* buff)
   else 
     return 0.0;
 }
+
+/* descrizione: funzione recupera la temperatura dal buffer wifi salvandola sottoforma 
+ *              di stringa nella variabile globale "currStrTemp" e ne ritorna il valore float;
+ * param[in] buff: puntatore al buffer wifi.
+ */
 float getTemp(char* buff) 
 {
   if(buff[14]=='t' && buff[15]>='0' && buff[15]<='9') 
@@ -252,6 +282,11 @@ float getTemp(char* buff)
     return 0.0;
   }
 }
+
+/* descrizione: funzione recupera l'umidità dal buffer wifi salvandola sottoforma 
+ *              di stringa nella variabile globale "currStrHum" e ne ritorna il valore float;
+ * param[in] buff: puntatore al buffer wifi.
+ */
 float getHum(char* buff) 
 {
   if(buff[8]=='u'&& buff[9]>='0' && buff[9]<='9') 
@@ -267,14 +302,18 @@ float getHum(char* buff)
   }
 }
 
-double sealevel(double P, double A)
-// Given a pressure P (mb) taken at a specific altitude (meters),
-// return the equivalent pressure (mb) at sea level.
-// This produces pressure readings that can be used for weather measurements.
-{
-	return(P/pow(1-(A/44330.0),5.255));
+/* descrizione: funzione che, data una pressione P (mb) misurata a una speifica 
+ *              altitudine A (meters), ritorna la pressione al livello del mare;
+ * param[in] double P: pressione espressa in millibar;
+ * param[in] double A: altitudine espressa in metri.
+ */ 
+double sealevel(double P, double A) {
+  return(P/pow(1-(A/44330.0),5.255));
 }
 
+/* descrizione: funzione che gestisce il touchscreen dell'iterfaccia in base alla 
+ *              schermata visualizzata e gestisce il valore "inattivita".
+ */
 void touchInterface()
 {
   if (myTouch.dataAvailable())
@@ -296,9 +335,15 @@ void touchInterface()
         }
         else if((x>=5) && (x<=105) ) { //in primo rettangolo
            myGLCD.setColor(255, 165, 0);
-           myGLCD.drawRect(5, 37, 105, 177);
+           myGLCD.drawRect(5, 37, 106, 177);
            
         }
+      }
+      else if (((y>=184) && (y<=214)) && ((x>=15) && (x<=45))) //clicco su settings
+      {
+        myGLCD.setColor(255, 165, 0);
+        myGLCD.drawRect(15, 184, 45, 214);
+        setPressione();
       }
       else if(y>=220) {
          myGLCD.setColor(255, 165, 0);
@@ -313,12 +358,12 @@ void touchInterface()
         myGLCD.drawRect(280, 45, 310, 75);
         printSituazioneEsterna();
       }
-      else if (((y>=132) && (y<=162)) && ((x>=280) && (x<=310))) //clicco su settings
-      {
-        myGLCD.setColor(255, 165, 0);
-        myGLCD.drawRect(280, 132, 310, 162);
-        setPressione();
-      }
+//      else if (((y>=132) && (y<=162)) && ((x>=280) && (x<=310))) //clicco su settings
+//      {
+//        myGLCD.setColor(255, 165, 0);
+//        myGLCD.drawRect(280, 132, 310, 162);
+//        setPressione();
+//      }
       else if(y>=220) {
          myGLCD.setColor(255, 165, 0);
          myGLCD.drawRect(0,221, 319, 239);
@@ -326,25 +371,24 @@ void touchInterface()
       }
       break;
     case 3: // schermata situazione esterna
-      myGLCD.drawRect(15, 37, 111,219);
-      if (((y>=37) && (y<=219)) && ((x>=15) && (x<=111)))        //clicco sul primo rettangolo
+      if (((y>=37) && (y<=219)) && ((x>=15) && (x<=303)))        //clicco sul primo rettangolo
       {
         myGLCD.setColor(255, 165, 0);
-        myGLCD.drawRect(15, 37, 111,219);
+        myGLCD.drawRect(15, 37, 303,219);
         grafico();
       }
-      else if (((y>=37) && (y<=219)) && ((x>=112) && (x<=207)))  //clicco sul secondo rettangolo 
-      {
-        myGLCD.setColor(255, 165, 0);
-        myGLCD.drawRect(112, 37, 207, 219);
-        printMain();
-      }
-      else if (((y>=37) && (y<=219)) && ((x>=208) && (x<=303)))  //clicco sul terzo rettangolo 
-      {
-        myGLCD.setColor(255, 165, 0);
-        myGLCD.drawRect(208, 37, 303, 219);
-        grafico();
-      }
+//      else if (((y>=37) && (y<=219)) && ((x>=112) && (x<=207)))  //clicco sul secondo rettangolo 
+//      {
+//        myGLCD.setColor(255, 165, 0);
+//        myGLCD.drawRect(112, 37, 207, 219);
+//        printMain();
+//      }
+//      else if (((y>=37) && (y<=219)) && ((x>=208) && (x<=303)))  //clicco sul terzo rettangolo 
+//      {
+//        myGLCD.setColor(255, 165, 0);
+//        myGLCD.drawRect(208, 37, 303, 219);
+//        grafico();
+//      }
       else if(y>=220) {
          myGLCD.setColor(255, 165, 0);
          myGLCD.drawRect(0,221, 319, 239);
@@ -359,6 +403,10 @@ void touchInterface()
     inattivita++;
 }
 
+/* descrizione: funzione che salva sulla memoria EEPROM il valore dell'altitudine
+ *              utilizzando gli indirizzi 1 e 2 e nella variabile globale "altitudine";
+ * param[in] int alt: altitudine da salvare (max valore 9999).
+ */
 void saveAltitude(int alt) {
   int miglCent = (int)(alt/100);
   EEPROM.write(0, miglCent);
@@ -386,22 +434,32 @@ void saveAltitude(int alt) {
 //  }
 //}
 
+/* descrizione: funzione che legge e ritorna il valore dell'altitudine salvato sul'EEPROM.
+ */
 int readAltitude() {
   int alt = EEPROM.read(0)*100;
   alt += EEPROM.read(1);
   return alt;
 }
 
+/* descrizione: funzione che accende la retroilluminazione dello schermo.
+ */
 void backlightOn() 
 {
   digitalWrite(backlightPin,LOW); 
 }
+
+/* descrizione: funzione che spegne la retroilluminazione dello schermo.
+ */
 void backlightOff() 
 {
   digitalWrite(backlightPin,HIGH);
 }
 
-void printSerialTime(Time x){
+/* descrizione: funzione che stampa su porta seriale l'ora indicata;
+ * param[in] Time x: valore dell'orario da stampare.
+ */
+void printSerialTime(const Time& x){
   Serial.print('\n');
   Serial.print(x.hour);
   Serial.print(x.min);
@@ -409,6 +467,9 @@ void printSerialTime(Time x){
   Serial.print(":");
 }
 
+/* descrizione: funzione che arrotorna il numero float indicato in intero e lo ritorna;
+ * param[in] float num: valore da arrotondare.
+ */
 int nextInt(float num) {
   if(num>0)
     return (int)(num+0.5);
@@ -416,6 +477,9 @@ int nextInt(float num) {
     return (int)(num-0.5);
 }
 
+/* descrizione: funzione che calcola gli orari di alba e tramonto del sole e li salva
+ *              nell'array globale "timeArray" utilizzando la variabile globale "t" (ora attuale).
+ */
 void calcolaOrariSole() {
   if(!lcdActive);
     t = rtc.getTime();

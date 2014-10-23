@@ -592,11 +592,19 @@ void waitForTouchRelease()
     myTouch.read();
 }
 
+void waitDelayTouch() {
+  int ms = 0; 
+  while (myTouch.dataAvailable()==true && ms<150) {
+    ms++;
+    delay(10);
+  }
+}
+
 void buttonWait(int x, int y)
 {
   myGLCD.setColor(255, 0, 0);
   myGLCD.drawRoundRect(x, y, x+32, y+25);
-  waitForTouchRelease();
+  waitDelayTouch();
   myGLCD.setColor(0, 0, 0);
   myGLCD.drawRoundRect(x, y, x+32, y+25);
 }

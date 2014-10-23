@@ -64,6 +64,8 @@ const uint8_t buttonPin = 18;     // the number of the pushbutton pin /Interrupt
 const uint8_t backlightPin = 9;   // number of backlight tft pin
 const uint8_t wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4    
 
+uint8_t storicoToSd = 0;          // 1 se l'arduino deve salvare lo storico su sd, 0 altrimenti
+
 int wakeCount =0;
 int cycleNum;
 #define STANBY_SEC 300

@@ -99,7 +99,7 @@ void printSituazioneEsterna() {
 
   //'sfondo'
   myGLCD.setColor(255,255,255); 
-  myGLCD.fillRect(0, 38, 319, 219);
+  myGLCD.fillRect(0, 37, 319, 219);
 
   //ultima riga data
   printDataOra(true);
@@ -159,17 +159,22 @@ void printSituazioneEsterna() {
     myGLCD.print("--.-",32 , 181); 
   //FINE DATI
 
-  //primo recttangolo
+  //stampo linee divisorie
   myGLCD.setColor(170,170,170);
-  myGLCD.drawRect(15, 37, 111,219);
+  myGLCD.drawLine(111, 37, 111, 219);
+  myGLCD.drawLine(208, 37, 208, 219);
+  
+  //primo recttangolo
+  //myGLCD.setColor(170,170,170);
+  //myGLCD.drawRect(15, 37, 111,219);
 
   //secondo rettangolo
-  myGLCD.setColor(210, 210, 210); //grigio
-  myGLCD.drawRect(112, 37, 207, 219);
+  //myGLCD.setColor(170, 170, 170); //grigio
+  //myGLCD.drawRect(112, 37, 207, 219);
 
   //terzo rettangolo
-  myGLCD.setColor(170, 170, 170); //Piu grigio
-  myGLCD.drawRect(208, 37, 303, 219);
+  //myGLCD.setColor(170, 170, 170); //Piu grigio
+  //myGLCD.drawRect(208, 37, 303, 219);
   //FINE LAYOUT
 
   //immagini meteo
@@ -219,18 +224,16 @@ void printMain() {
 
   //'sfondo'
   myGLCD.setColor(255,255,255); 
-  myGLCD.fillRect(0, 38, 319, 219);
+  myGLCD.fillRect(0, 37, 319, 219);
 
   //ultima riga data
   printDataOra(true);
 
-  //primo recttangolo situazione interna
+  //recttangolo situazione interna
   myGLCD.setColor(170,170,170);
-  myGLCD.drawRect(5, 37, 105,177);
-
-  //secondo rettangolo sistuazione esterna
-  myGLCD.setColor(210, 210, 210); //grigio
-  myGLCD.drawRect(106, 37, 206, 177);
+  myGLCD.drawRect(5, 37, 206,177);
+  //linea divisoria
+  myGLCD.drawRect(106, 37, 106, 177);
 
   myGLCD.setFont(franklingothic_normal);
   myGLCD.setBackColor(255,255,255);
@@ -255,17 +258,17 @@ void printMain() {
   myGLCD.print(String(currStrHum)+"%",138,117);
 
   //icona indietro
-  myGLCD.drawBitmap(15,184,30,30,arrow);
+  //myGLCD.drawBitmap(15,184,30,30,arrow);
   //icona settings
-  myGLCD.drawBitmap(60,184,30,30,settings);
+  myGLCD.drawBitmap(15,184,30,30,settings);
 
   //pressione
   myGLCD.setFont(franklingothic_normal);
   if(currPress==0)
-    myGLCD.print("----.-hPa",100,192);
+    myGLCD.print("----.-hPa",70,192);
   else {
-    myGLCD.printNumF(currPress,1,100,192);
-    myGLCD.print("hPa",196,192);
+    myGLCD.printNumF(currPress,1,70,192);
+    myGLCD.print("hPa",166,192);
   }
   
   //alba
@@ -415,7 +418,7 @@ void printPulsanti() {
   //icona indietro
   myGLCD.drawBitmap(280,45,30,30,arrow);
   //icona settings
-  myGLCD.drawBitmap(280,132,30,30,settings);
+  //myGLCD.drawBitmap(280,132,30,30,settings);
 }
 
 void grafico () {
@@ -534,7 +537,7 @@ void grafico () {
   printDataOra(true);
 }
 
-void drawEmptyBar(uint8_t ora) {
+void drawEmptyBar(int8_t ora) {
   int pressione = maxScala;
   uint8_t x = 50;
   uint8_t y = 190;
@@ -573,7 +576,7 @@ void drawEmptyBar(uint8_t ora) {
   }
 }
 
-void drawPressBar(uint8_t ora, float tPressione) {
+void drawPressBar(int8_t ora, float tPressione) {
   int pressione = nextInt(tPressione);
   uint8_t x = 50;
   uint8_t y = 190;
