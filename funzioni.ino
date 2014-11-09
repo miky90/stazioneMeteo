@@ -1,3 +1,123 @@
+static void my_callback (byte status, word offset, word len) {
+  Serial.println("response");
+  Serial.println( (char *) Ethernet::buffer + offset);
+  Serial.println();
+  int indice=0;
+  uint8_t flag = 0;
+  while(indice < len){
+    if(buffer[indice++]!='"')
+      flag=1;
+  }
+  if(flag==1){
+    String risposta;
+    risposta += buffer[indice];
+    risposta += buffer[indice+1];
+    if(risposta.equals("ok")) {
+      Serial.println("parametri inviati");
+    }
+    else if(buffer[indice]=='e'){
+      Serial.println("errore invio");
+    }
+  }
+  else {
+     Serial.println("sito inaccessibile");
+     inizializeEth();
+  }
+}
+
+void regolaOraFromNtp() {
+  unsigned long timeFromNtp = getNtpTime();
+  if(timeFromNtp != 0) {
+    setTime(timeFromNtp);
+    rtc.setTime(hour(),minute(),second());
+    rtc.setTime(day(),month(),year());
+  }
+}
+unsigned long getNtpTime() {  
+ if(Ethernet::isLinkUp()) { 
+  unsigned long timeFromNTP;   
+  const unsigned long seventy_years = 2208988800UL;      
+ 
+  ether.ntpRequest(ntpServer, ntpMyPort);   
+  while(true) {       
+    word length = ether.packetReceive();       
+    ether.packetLoop(length);       
+    if(length > 0 && ether.ntpProcessAnswer(&timeFromNTP, ntpMyPort)) {
+      Serial.print("Time from NTP: ");
+      Serial.println(timeFromNTP);
+      return UK.toLocal(timeFromNTP - seventy_years);
+    }
+  }
+  return 0;
+ }
+}
+
+static uint8_t inizializeEth() {
+  printCenterMessage("Inizializz. Rete");
+  Serial.print("Verifica Enc28j60 ... ");
+  if ( ether.begin( sizeof Ethernet::buffer, mac, ENC28J60_CS) ) 
+    Serial.println("\tsuccess");
+  else {
+    Serial.println("\tfailed");
+    return 0;
+  }
+  Serial.print("Setting IP ... ");
+  if ( ether.dhcpSetup() ) {
+    Serial.println("\t\tsuccess");
+  } 
+  else {
+    Serial.println("\t\tfailed");
+    return 0;
+//    if ( ether.staticSetup(ip,gw,dns,mask) ) 
+//      Serial.println("\t\tsuccess");
+//    else {
+//      Serial.println("\t\tfailed");
+//      
+//   }
+  }
+  ether.printIp("Allocated IP: ", ether.myip);
+  ether.printIp("Gateway IP  : ", ether.gwip);  
+  ether.printIp("DNS IP      : ", ether.dnsip); 
+  Serial.print("Verifica sito web ... ");
+  if ( ether.dnsLookup( website ) ) 
+    Serial.println("\tsuccess");
+  else {
+    Serial.println("\tfailed");
+    return 0;
+  }
+  Serial.println();
+  return 1;
+}
+
+
+void invioDati() {
+    while(flag==false) {
+      //touchInterface();
+      if (millis()/1000 > time_last){
+        if ( (time_last = millis()/1000) % interval == 0 ){
+          flag = true;
+          char s_temperature[5]; // 5 caratteri (5 char) perché il nostro numero decimale (float) è 
+                                 // formato da: [ un intero a due cifre, un punto, un decimale, ed in fine si aggiungerà il 
+                                 // terminatore di stringa (cioè \0) ]
+          dtostrf(currTemp, 4, 1, s_temperature);
+          
+          char s_humidity[5]; // 5 caratteri (5 char) perché il nostro numero decimale (float) è formato da: [ un intero 
+                              // a due cifre, un punto, un decimale, ed in fine si aggiungerà il terminatore di stringa (cioè \0) ]
+          dtostrf(currHum, 4, 1, s_humidity);
+          
+          char s_pressure[7]; // 5 caratteri (5 char) perché il nostro numero decimale (float) è formato da: [ un intero 
+                              // a due cifre, un punto, un decimale, ed in fine si aggiungerà il terminatore di stringa (cioè \0) ]
+          dtostrf(currPress, 6, 1, s_pressure);
+          sprintf(buffer, "temp=%s&hum=%s&press=%s", s_temperature, s_humidity, s_pressure);
+          ether.browseUrl(PSTR("/arduino.php?"), buffer, website, my_callback);
+          Serial.println(buffer);
+          ether.packetLoop(ether.packetReceive());
+        }
+      }
+    }
+    flag=false;
+}
+
 /* descrizione: funzione per aggiornamento dei valori interni letti dai sensori 
  *              ed esterni se presenti nel buffer wifi.
  */
@@ -40,152 +160,152 @@ float calcolaPrevisione(uint8_t ora) {
 /* descrizione: funzione per il salvataggio dei valori attuali letti dai sensori esterni
  *              in un file testuale con nome GGMMAAAA.TXT su sd.
  */
-void saveToSd() {
-  Serial.println("save to SD");
-  if(sdAviable && storicoToSd) {
-    String nomeFile =  rtc.getDateStr();
-    nomeFile.replace(".","");
-    nomeFile.concat(".TXT");
-    char nome [13];
-    nomeFile.toCharArray(nome,13);
-    Serial.println(nome);
-    Serial.println(nomeFile);
-    if (!file.exists(nome))
-      file.create(nome);
-    byte res=file.openFile(nome, FILEMODE_TEXT_WRITE);
-     if (res==NO_ERROR)
-     {
-       String stringa = rtc.getTimeStr();
-       stringa.concat("t:");
-       stringa.concat(currStrTemp);
-       stringa.concat("h:");
-       stringa.concat(currStrHum);
-       stringa.concat("p:");
-       int intero = currPress;
-       int decimale = ((int)(currPress*10))-intero;
-       stringa.concat(intero);
-       stringa.concat(".");
-       stringa.concat(decimale);
-       char * buf = new char[27];
-       Serial.println(stringa);
-       stringa.toCharArray(buf,27);
-       Serial.println(buf);
-       file.writeLn(buf);
-       file.closeFile();
-       delete buf;
-     }
-     else
-     {
-       switch(res)
-       {
-         case ERROR_ANOTHER_FILE_OPEN:
-           Serial.println("** ERROR: Another file is already open...");
-           break;
-         default:
-           Serial.print("** ERROR: ");
-           Serial.println(res,HEX);
-           break;
-       }
-     }
-  }
-}
+//void saveToSd() {
+//  Serial.println("save to SD");
+//  if(sdAviable && storicoToSd) {
+//    String nomeFile =  rtc.getDateStr();
+//    nomeFile.replace(".","");
+//    nomeFile.concat(".TXT");
+//    char nome [13];
+//    nomeFile.toCharArray(nome,13);
+//    Serial.println(nome);
+//    Serial.println(nomeFile);
+//    if (!file.exists(nome))
+//      file.create(nome);
+//    byte res=file.openFile(nome, FILEMODE_TEXT_WRITE);
+//     if (res==NO_ERROR)
+//     {
+//       String stringa = rtc.getTimeStr();
+//       stringa.concat("t:");
+//       stringa.concat(currStrTemp);
+//       stringa.concat("h:");
+//       stringa.concat(currStrHum);
+//       stringa.concat("p:");
+//       int intero = currPress;
+//       int decimale = ((int)(currPress*10))-intero;
+//       stringa.concat(intero);
+//       stringa.concat(".");
+//       stringa.concat(decimale);
+//       char * buf = new char[27];
+//       Serial.println(stringa);
+//       stringa.toCharArray(buf,27);
+//       Serial.println(buf);
+//       file.writeLn(buf);
+//       file.closeFile();
+//       delete buf;
+//     }
+//     else
+//     {
+//       switch(res)
+//       {
+//         case ERROR_ANOTHER_FILE_OPEN:
+//           Serial.println("** ERROR: Another file is already open...");
+//           break;
+//         default:
+//           Serial.print("** ERROR: ");
+//           Serial.println(res,HEX);
+//           break;
+//       }
+//     }
+//  }
+//}
 
 /* descrizione: recupera valori salvati su sd.
  */
-void retriveFromSd() {
-  Serial.println("retrive from SD");
-  if(sdAviable && storicoToSd) {
-    byte res;
-    word result;
-    char textBuffer[27];
-    String nomeFile =  rtc.getDateStr();
-    nomeFile.replace(".","");
-    nomeFile.concat(".TXT");
-    char nome [nomeFile.length()+1];
-    nomeFile.toCharArray(nome,nomeFile.length()+1);
-    Serial.println(nome);
-    if (file.exists(nome))
-    {  
-      res=file.openFile(nome, FILEMODE_TEXT_READ);
-      if (res==NO_ERROR)
-      {
-        int maxHour = -1;
-        result=0;
-        while ((result!=EOF) and (result!=FILE_IS_EMPTY))
-        {
-          result=file.readLn(textBuffer, 27);
-          if (result!=FILE_IS_EMPTY)
-          {
-            if (result==BUFFER_OVERFLOW) {
-              Serial.print(textBuffer);
-            }
-            else{
-              Serial.println(textBuffer);
-              
-              char cOra[] = {textBuffer[0], textBuffer[1]};
-              Serial.print(textBuffer[0]);
-              Serial.println(textBuffer[1]);
-              Serial.println(cOra);
-              int ora = atoi(cOra);
-              Serial.print("ora: ");
-              Serial.println(ora);
-              if(maxHour<ora){
-                maxHour=ora;
-       
-                char cTemp[] = {textBuffer[10], textBuffer[11], textBuffer[12], textBuffer[13]};
-                float tTemp = atof(cTemp);
-                
-              
-                char cHum[] = {textBuffer[16], textBuffer[17]};
-                int tHum = atoi(cHum);
-           
-                char cPress[] = {textBuffer[20], textBuffer[21], textBuffer[22], textBuffer[23], textBuffer[24], textBuffer[25]};
-                float tPress = atof(cPress);
-                storico.saveCurrent(tTemp, tHum, tPress);
-              }
-              
-            }
-          }
-          else
-            Serial.println("** ERROR: File is empty...");
-        }
-        Serial.println();
-        file.closeFile();
-        int diffHour = t.hour - maxHour;
-        if(diffHour)
-          for(int i=0;i<diffHour;i++)
-            storico.saveCurrent(0, 0, 0);
-        else {
-            currPress=storico.getPress();
-            currTemp=storico.getTemp();
-            currHum=storico.getHum();
-        }
-      }
-      else
-      {
-        switch(res)
-        {
-          case ERROR_ANOTHER_FILE_OPEN:
-            Serial.println("** ERROR: Another file is already open...");
-            break;
-          default:
-            Serial.print("** ERROR: ");
-            Serial.println(res,HEX);
-            break;
-        }
-      }
-    }
-    else
-      Serial.println("** ERROR: file does not exist...");
-  }
-}
+//void retriveFromSd() {
+//  Serial.println("retrive from SD");
+//  if(sdAviable && storicoToSd) {
+//    byte res;
+//    word result;
+//    char textBuffer[27];
+//    String nomeFile =  rtc.getDateStr();
+//    nomeFile.replace(".","");
+//    nomeFile.concat(".TXT");
+//    char nome [nomeFile.length()+1];
+//    nomeFile.toCharArray(nome,nomeFile.length()+1);
+//    Serial.println(nome);
+//    if (file.exists(nome))
+//    {  
+//      res=file.openFile(nome, FILEMODE_TEXT_READ);
+//      if (res==NO_ERROR)
+//      {
+//        int maxHour = -1;
+//        result=0;
+//        while ((result!=EOF) and (result!=FILE_IS_EMPTY))
+//        {
+//          result=file.readLn(textBuffer, 27);
+//          if (result!=FILE_IS_EMPTY)
+//          {
+//            if (result==BUFFER_OVERFLOW) {
+//              Serial.print(textBuffer);
+//            }
+//            else{
+//              Serial.println(textBuffer);
+//              
+//              char cOra[] = {textBuffer[0], textBuffer[1]};
+//              Serial.print(textBuffer[0]);
+//              Serial.println(textBuffer[1]);
+//              Serial.println(cOra);
+//              int ora = atoi(cOra);
+//              Serial.print("ora: ");
+//              Serial.println(ora);
+//              if(maxHour<ora){
+//                maxHour=ora;
+//       
+//                char cTemp[] = {textBuffer[10], textBuffer[11], textBuffer[12], textBuffer[13]};
+//                float tTemp = atof(cTemp);
+//                
+//              
+//                char cHum[] = {textBuffer[16], textBuffer[17]};
+//                int tHum = atoi(cHum);
+//           
+//                char cPress[] = {textBuffer[20], textBuffer[21], textBuffer[22], textBuffer[23], textBuffer[24], textBuffer[25]};
+//                float tPress = atof(cPress);
+//                storico.saveCurrent(tTemp, tHum, tPress);
+//              }
+//              
+//            }
+//          }
+//          else
+//            Serial.println("** ERROR: File is empty...");
+//        }
+//        Serial.println();
+//        file.closeFile();
+//        int diffHour = t.hour - maxHour;
+//        if(diffHour)
+//          for(int i=0;i<diffHour;i++)
+//            storico.saveCurrent(0, 0, 0);
+//        else {
+//            currPress=storico.getPress();
+//            currTemp=storico.getTemp();
+//            currHum=storico.getHum();
+//        }
+//      }
+//      else
+//      {
+//        switch(res)
+//        {
+//          case ERROR_ANOTHER_FILE_OPEN:
+//            Serial.println("** ERROR: Another file is already open...");
+//            break;
+//          default:
+//            Serial.print("** ERROR: ");
+//            Serial.println(res,HEX);
+//            break;
+//        }
+//      }
+//    }
+//    else
+//      Serial.println("** ERROR: file does not exist...");
+//  }
+//}
 
 /* descrizione: salva i dati attuali nello storico e su sd.
  */
 void storeData () {
   Serial.println("store data");
   storico.saveCurrent(currTemp, currHum, currPress);
-  saveToSd();
+  //saveToSd();
 }
 
 /* descrizione: funzione che recupera i valori dal sensore interno.
@@ -208,27 +328,25 @@ void checkDataOra() {
 void recuperaDati() {
   Serial.println("aggiorno dati esterni");
   char* bufferWifi;
+  uint8_t error = 0;
   // Should be a message for us now   
   uint8_t buf[RH_NRF24_MAX_MESSAGE_LEN];
   uint8_t len = sizeof(buf);
   if (nrf24.recv(buf, &len)) {
     bufferWifi=(char*)buf;
+    Serial.println(bufferWifi);
     currPress=sealevel(getPressione(bufferWifi),altitudine);
     currTemp=getTemp(bufferWifi);
     currHum= getHum(bufferWifi);
-//    if((currStrTemp!= "--.-") && (currStrHum != "--") && (currPress!=0)) {
-//      currTemp=tempWifi;
-//      Serial.print(currTemp);
-//      currHum=humWifi;
-//    }
-//    else {
-//      currTemp=0;
-//      currStrTemp= "--.-";
-//      currHum=0;
-//      currStrHum = "--";
-//    }
-    nrf24.setModeIdle();   //Moallità risparmio energetico wifi
+    if((currTemp==0) || (currHum == 0)) {
+      Serial.println("errore comunicazione");
+      printCenterMessage("Errore comunicazione");
+      error = 1;
+    }
+  nrf24.setModeIdle();   //Moallità risparmio energetico wifi
   }
+  if(error)
+    return;
   //rendo reattiva la grafica
   touchInterface();
   if(!lcdActive);
@@ -244,6 +362,7 @@ void recuperaDati() {
       storeData();
       oldDataSaved=t;
     }
+  invioDati();
 }
 
 /* descrizione: funzione recupera la pressione dal buffer wifi e ne ritorna il valore float;

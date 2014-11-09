@@ -1,62 +1,197 @@
-// FUNZIONI *****************************************************************//
-void printError(uint8_t id){
-  switch(id) {
-  case 0 : 
-    errorConnection=true;
-    myGLCD.setFont(SmallFont);
-    myGLCD.setColor(0, 0, 0); 
-    myGLCD.setBackColor(255, 165, 0); //Arancione
-    myGLCD.print("Conn. Failed", 230, 3);
-    break;
-  default: 
-    break;
-  }
-}
 
-void printTopBar() {
-   myGLCD.setFont(franklingothic_normal);
-  //Titolo
-  myGLCD.setColor(255, 165, 0); //Arancione
-  myGLCD.fillRect(0, 0, 319, 20);
+//schermata 1
+//metodo print interfaccia principale
+void printMain() {
+  schermata=1;
+  calcolaOrariSole();
+  //LAYOUT
+  printTopBar("METEO");
+
+  //2 riga
+  myGLCD.setFont(franklingothic_normal);
+  myGLCD.setColor(64, 64, 64); //Grigiet sotto
+  myGLCD.fillRect(0, 218, 319, 239);
   myGLCD.setColor(255, 255, 255); //Bianco
-  myGLCD.setBackColor(255, 165, 0); //Arancione
-  myGLCD.print("METEO", CENTER, 1);
-  if(!sdAviable){
-    myGLCD.setColor(100, 100, 100); //Bianco
-    myGLCD.setBackColor(255, 95, 0); //Arancione
+  myGLCD.setBackColor(64, 64, 64); //Grigiet sotto
+  myGLCD.print(" Situazione Attuale ", CENTER, 21);
+
+  //'sfondo'
+  myGLCD.setColor(255,255,255); 
+  myGLCD.fillRect(0, 37, 319, 219);
+
+  //ultima riga data
+  printDataOra(true);
+
+  //recttangolo situazione interna
+  myGLCD.setColor(170,170,170);
+  myGLCD.drawRect(5, 37, 206,177);
+  //linea divisoria
+  myGLCD.drawRect(106, 37, 106, 177);
+
+  myGLCD.setFont(franklingothic_normal);
+  myGLCD.setBackColor(255,255,255);
+  myGLCD.setColor(0,0,0);
+
+  //IN
+  myGLCD.print("IN",38,52);
+  char tmpTemp[2];
+  dtostrf(currInTemp,2,1,tmpTemp);
+  myGLCD.setFont(DotMatrix_M_Slash);
+  myGLCD.print(String(tmpTemp)+"`",20,84);
+  char tmpHum[3];
+  dtostrf(currInHum,2,0,tmpHum);
+  myGLCD.setFont(franklingothic_normal);
+  myGLCD.print(String(tmpHum)+"%",33,117);
+
+  //OUT
+  myGLCD.print("OUT",131,52);
+  myGLCD.setFont(DotMatrix_M_Slash);
+  myGLCD.print(String(currStrTemp)+"`",122,84);
+  myGLCD.setFont(franklingothic_normal);
+  myGLCD.print(String(currStrHum)+"%",138,117);
+
+  //icona indietro
+  //myGLCD.drawBitmap(15,184,30,30,arrow);
+  //icona settings
+  myGLCD.drawBitmap(15,184,30,30,settings);
+
+  //pressione
+  myGLCD.setFont(franklingothic_normal);
+  if(currPress==0)
+    myGLCD.print("----.-hPa",70,192);
+  else {
+    myGLCD.printNumF(currPress,1,70,192);
+    myGLCD.print("hPa",166,192);
   }
-  myGLCD.print("SD",RIGHT,1);
+  
+  //alba
+  myGLCD.setFont(SmallFont);
+  myGLCD.print("a: ",236,140);
+  myGLCD.printNumI(timeArray[SUNRISE_H],260,140,2);
+  myGLCD.print(":",276,140);
+  myGLCD.printNumI(timeArray[SUNRISE_M],284,140,2);
+  //tramonto
+  myGLCD.print("t: ",236,156);
+  myGLCD.printNumI(timeArray[SUNSET_H],260,156,2);
+  myGLCD.print(":",276,156);
+  myGLCD.printNumI(timeArray[SUNSET_M],284,156,2);
+  
+  //immagine meteo
+  printImageMeteo(2,currPress);
 }
 
-void flashPrevision(){
-  if(schermata==2) {
-    if(flashBar) {
-      if(mSecFlash==0) {
-        drawPressBar(1,calcolaPrevisione(1));
-        mSecFlash+=1;
-      }
-      else if(mSecFlash<100)
-        mSecFlash+=1;
-      else {
-        flashBar=false;
-        mSecFlash=0;
-      }
-    }
-    else {
-      if(mSecFlash==0) {
-        drawEmptyBar(1);
-        mSecFlash+=1;
-      }
-      else if(mSecFlash<50)
-        mSecFlash+=1;
-      else {
-        flashBar=true;
-        mSecFlash=0;
-      }
-    }
-  } 
+//Schermata 2
+void grafico () {
+  schermata=2;
+  flashBar=true;
+  mSecFlash=0;
+
+  printTopBar("Pressione");
+
+  //'sfondo'
+  myGLCD.setColor(255,255,255); 
+  myGLCD.fillRect(0, 21, 319, 220);
+
+  //rettangolo grafico
+  myGLCD.setColor(0,0,0);
+  myGLCD.drawRect(48, 24, 272, 192);
+
+  //8 riga - pressione
+  myGLCD.setFont(SmallFont);
+  myGLCD.setColor(255, 255, 255); //Bianco
+  myGLCD.setBackColor(0,0,0);
+  //myGLCD.print("1234567890123456789012345678901234567890"
+  myGLCD.print("      -24 -12  -6  -3  -1 ora  +1      ", CENTER, 202);
+  //righe griglia
+  myGLCD.setColor(0, 0, 0);
+  myGLCD.drawLine(80, 24, 80, 192);
+  myGLCD.drawLine(112, 24, 112, 192);
+  myGLCD.drawLine(144, 24, 144, 192);  
+  myGLCD.drawLine(176, 24, 176, 192);
+  myGLCD.drawLine(208, 24, 208, 192);
+  myGLCD.drawLine(240, 24, 240, 192);
+
+  float pressioni[7];
+  pressioni[0]=storico.getPress(-24);
+  pressioni[1]=storico.getPress(-12);
+  pressioni[2]=storico.getPress(-6);
+  pressioni[3]=storico.getPress(-3);
+  pressioni[4]=storico.getPress(-1);
+  pressioni[5]=currPress;
+  pressioni[6]=calcolaPrevisione(1);
+
+  int massimo = max (pressioni[0],pressioni[1]);
+  massimo = max (massimo,pressioni[2]);
+  massimo = max (massimo,pressioni[3]);
+  massimo = max (massimo,pressioni[4]);
+  massimo = max (massimo,pressioni[5]);
+  massimo = max (massimo,pressioni[6]);
+
+  int minimo = min (pressioni[0],pressioni[1]);
+  minimo = min (minimo,pressioni[2]);
+  minimo = min (minimo,pressioni[3]);
+  minimo = min (minimo,pressioni[4]);
+  minimo = min (minimo,pressioni[5]);
+  minimo = min (minimo,pressioni[6]);
+
+  int  media = (massimo + minimo )/2;
+  if(media > 1017) {
+    if(minimo<1005)
+      maxScala = 1020;
+    else if(massimo <1025)
+      maxScala = 1025;
+    else
+      maxScala = 1030;
+  }
+  else {
+    if(massimo>1025)
+      maxScala = 1030;
+    else if(massimo>1020)
+      maxScala = 1025;
+    else
+      maxScala = 1020;
+  }
+
+  /*if(massimo>1015)
+   maxScala = 1025;
+   else if(massimo<1015 & massimo>1005)
+   maxScala = 1020;
+   else if(massimo<1005)
+   maxScala = 1015;
+   */
+  drawPressBar(-24,pressioni[0]);
+  drawPressBar(-12,pressioni[1]);
+  drawPressBar(-6,pressioni[2]);
+  drawPressBar(-3,pressioni[3]);
+  drawPressBar(-1,pressioni[4]);
+  drawPressBar(0,pressioni[5]);
+  drawPressBar(1,pressioni[6]);
+
+  //1020hpa grafico
+  myGLCD.setColor(0, 0, 0); //Nero
+  myGLCD.setBackColor(255,255,255);
+  myGLCD.printNumI(maxScala, 16, 26);
+  //1015hpa gr
+  myGLCD.setColor(0, 0, 0); //Bianco
+  myGLCD.printNumI((maxScala-5), 16, 62);
+  myGLCD.drawLine(49, 66, 271, 66);
+  //1010hpa grafico
+  myGLCD.setColor(0, 0, 0); //Bianco
+  myGLCD.printNumI((maxScala-10), 16, 104);
+  myGLCD.drawLine(49, 108, 271, 108);
+  //1005hpa gr
+  myGLCD.setColor(0, 0, 0); //Bianco
+  myGLCD.printNumI((maxScala-15), 16, 146);
+  myGLCD.drawLine(49, 150, 271, 150);
+  //1000hpa grafico
+  myGLCD.setColor(0, 0, 0); //Bianco
+  myGLCD.printNumI((maxScala-20), 16, 185);
+
+  printPulsanti(); 
+  printDataOra(true);
 }
 
+//Schermata 3
 void printSituazioneEsterna() {
   detachInterrupt(5);
   //numero schermata
@@ -207,84 +342,125 @@ void printMeteoAttuale() {
   myGLCD.print(currStrTemp,120,181);
   printImageMeteo(1,currPress);
 }
-//metodo print interfaccia principale
-void printMain() {
-  schermata=1;
-  calcolaOrariSole();
-  //LAYOUT
-  printTopBar();
 
-  //2 riga
+//Schermata 5
+//void graficoTemperatura () {
+//  schermata=5;
+//
+//  printTopBar("Temperatura");
+//
+//  //'sfondo'
+//  myGLCD.setColor(255,255,255); 
+//  myGLCD.fillRect(0, 21, 319, 220);
+//
+//  //rettangolo grafico
+//  myGLCD.setColor(0,0,0);
+//  myGLCD.drawRect(48, 24, 272, 192);
+//
+//  //8 riga - pressione
+//  myGLCD.setFont(SmallFont);
+//  myGLCD.setColor(255, 255, 255); //Bianco
+//  myGLCD.setBackColor(0,0,0);
+//  //myGLCD.print("1234567890123456789012345678901234567890"
+//  myGLCD.print("      -24 -12  -6  -3  -1 ora  +1      ", CENTER, 202);
+//  //righe griglia
+//  myGLCD.setColor(0, 0, 0);
+//  myGLCD.drawLine(80, 24, 80, 192);
+//  myGLCD.drawLine(112, 24, 112, 192);
+//  myGLCD.drawLine(144, 24, 144, 192);  
+//  myGLCD.drawLine(176, 24, 176, 192);
+//  myGLCD.drawLine(208, 24, 208, 192);
+//  myGLCD.drawLine(240, 24, 240, 192);
+//
+//  float pressioni[7];
+//  pressioni[0]=storico.getPress(-24);
+//  pressioni[1]=storico.getPress(-12);
+//  pressioni[2]=storico.getPress(-6);
+//  pressioni[3]=storico.getPress(-3);
+//  pressioni[4]=storico.getPress(-1);
+//  pressioni[5]=currPress;
+//  pressioni[6]=calcolaPrevisione(1);
+//
+//  int massimo = max (pressioni[0],pressioni[1]);
+//  massimo = max (massimo,pressioni[2]);
+//  massimo = max (massimo,pressioni[3]);
+//  massimo = max (massimo,pressioni[4]);
+//  massimo = max (massimo,pressioni[5]);
+//  massimo = max (massimo,pressioni[6]);
+//
+//  int minimo = min (pressioni[0],pressioni[1]);
+//  minimo = min (minimo,pressioni[2]);
+//  minimo = min (minimo,pressioni[3]);
+//  minimo = min (minimo,pressioni[4]);
+//  minimo = min (minimo,pressioni[5]);
+//  minimo = min (minimo,pressioni[6]);
+//
+//  int  media = (massimo + minimo )/2;
+//  if(media > 1017) {
+//    if(minimo<1005)
+//      maxScala = 1020;
+//    else if(massimo <1025)
+//      maxScala = 1025;
+//    else
+//      maxScala = 1030;
+//  }
+//  else {
+//    if(massimo>1025)
+//      maxScala = 1030;
+//    else if(massimo>1020)
+//      maxScala = 1025;
+//    else
+//      maxScala = 1020;
+//  }
+//
+//  /*if(massimo>1015)
+//   maxScala = 1025;
+//   else if(massimo<1015 & massimo>1005)
+//   maxScala = 1020;
+//   else if(massimo<1005)
+//   maxScala = 1015;
+//   */
+//  drawPressBar(-24,pressioni[0]);
+//  drawPressBar(-12,pressioni[1]);
+//  drawPressBar(-6,pressioni[2]);
+//  drawPressBar(-3,pressioni[3]);
+//  drawPressBar(-1,pressioni[4]);
+//  drawPressBar(0,pressioni[5]);
+//  drawPressBar(1,pressioni[6]);
+//
+//  //1020hpa grafico
+//  myGLCD.setColor(0, 0, 0); //Nero
+//  myGLCD.setBackColor(255,255,255);
+//  myGLCD.printNumI(maxScala, 16, 26);
+//  //1015hpa gr
+//  myGLCD.setColor(0, 0, 0); //Bianco
+//  myGLCD.printNumI((maxScala-5), 16, 62);
+//  myGLCD.drawLine(49, 66, 271, 66);
+//  //1010hpa grafico
+//  myGLCD.setColor(0, 0, 0); //Bianco
+//  myGLCD.printNumI((maxScala-10), 16, 104);
+//  myGLCD.drawLine(49, 108, 271, 108);
+//  //1005hpa gr
+//  myGLCD.setColor(0, 0, 0); //Bianco
+//  myGLCD.printNumI((maxScala-15), 16, 146);
+//  myGLCD.drawLine(49, 150, 271, 150);
+//  //1000hpa grafico
+//  myGLCD.setColor(0, 0, 0); //Bianco
+//  myGLCD.printNumI((maxScala-20), 16, 185);
+//
+//  printPulsanti(); 
+//  printDataOra(true);
+//}
+
+
+// FUNZIONI *****************************************************************//
+
+void printCenterMessage(char* mex) {
+  uint8_t len = strlen(mex);
   myGLCD.setFont(franklingothic_normal);
-  myGLCD.setColor(64, 64, 64); //Grigiet sotto
-  myGLCD.fillRect(0, 218, 319, 239);
   myGLCD.setColor(255, 255, 255); //Bianco
-  myGLCD.setBackColor(64, 64, 64); //Grigiet sotto
-  myGLCD.print(" Situazione Attuale ", CENTER, 21);
-
-  //'sfondo'
-  myGLCD.setColor(255,255,255); 
-  myGLCD.fillRect(0, 37, 319, 219);
-
-  //ultima riga data
-  printDataOra(true);
-
-  //recttangolo situazione interna
-  myGLCD.setColor(170,170,170);
-  myGLCD.drawRect(5, 37, 206,177);
-  //linea divisoria
-  myGLCD.drawRect(106, 37, 106, 177);
-
-  myGLCD.setFont(franklingothic_normal);
-  myGLCD.setBackColor(255,255,255);
-  myGLCD.setColor(0,0,0);
-
-  //IN
-  myGLCD.print("IN",38,52);
-  char tmpTemp[2];
-  dtostrf(currInTemp,2,1,tmpTemp);
-  myGLCD.setFont(DotMatrix_M_Slash);
-  myGLCD.print(String(tmpTemp)+"`",20,84);
-  char tmpHum[3];
-  dtostrf(currInHum,2,0,tmpHum);
-  myGLCD.setFont(franklingothic_normal);
-  myGLCD.print(String(tmpHum)+"%",33,117);
-
-  //OUT
-  myGLCD.print("OUT",131,52);
-  myGLCD.setFont(DotMatrix_M_Slash);
-  myGLCD.print(String(currStrTemp)+"`",122,84);
-  myGLCD.setFont(franklingothic_normal);
-  myGLCD.print(String(currStrHum)+"%",138,117);
-
-  //icona indietro
-  //myGLCD.drawBitmap(15,184,30,30,arrow);
-  //icona settings
-  myGLCD.drawBitmap(15,184,30,30,settings);
-
-  //pressione
-  myGLCD.setFont(franklingothic_normal);
-  if(currPress==0)
-    myGLCD.print("----.-hPa",70,192);
-  else {
-    myGLCD.printNumF(currPress,1,70,192);
-    myGLCD.print("hPa",166,192);
-  }
-  
-  //alba
-  myGLCD.setFont(SmallFont);
-  myGLCD.print("a: ",236,140);
-  myGLCD.printNumI(timeArray[SUNRISE_H],260,140,2);
-  myGLCD.print(":",276,140);
-  myGLCD.printNumI(timeArray[SUNRISE_M],284,140,2);
-  //tramonto
-  myGLCD.print("t: ",236,156);
-  myGLCD.printNumI(timeArray[SUNSET_H],260,156,2);
-  myGLCD.print(":",276,156);
-  myGLCD.printNumI(timeArray[SUNSET_M],284,156,2);
-  
-  //immagine meteo
-  printImageMeteo(2,currPress);
+  myGLCD.setBackColor(64, 64, 64); 
+  myGLCD.print(mex,CENTER,(320/2)-(len/2));
 }
 
 void printImageMeteo(uint8_t colonna, float pressione) // '0' = -1h, '1' = ora, '2' = +1h  
@@ -414,6 +590,40 @@ void printDataOra(boolean ristampa) {
   }
 }
 
+void printError(uint8_t id){
+  switch(id) {
+  case 0 : 
+    errorConnection=true;
+    myGLCD.setFont(SmallFont);
+    myGLCD.setColor(0, 0, 0); 
+    myGLCD.setBackColor(255, 165, 0); //Arancione
+    myGLCD.print("Conn. Failed", 230, 3);
+    break;
+  default: 
+    break;
+  }
+}
+
+void printTopBar(char* titolo) {
+   myGLCD.setFont(franklingothic_normal);
+  //Titolo
+  myGLCD.setColor(255, 165, 0); //Arancione
+  myGLCD.fillRect(0, 0, 319, 20);
+  myGLCD.setColor(255, 255, 255); //Bianco
+  myGLCD.setBackColor(255, 165, 0); //Arancione
+  myGLCD.print(titolo, CENTER, 1);
+  if(!sdAviable){
+    myGLCD.setColor(100, 100, 100); //Bianco
+    myGLCD.setBackColor(255, 95, 0); //Arancione
+  }
+  myGLCD.print("SD",RIGHT,1);
+  if(!Ethernet::isLinkUp()){
+    myGLCD.setColor(100, 100, 100); //Bianco
+    myGLCD.setBackColor(255, 95, 0); //Arancione
+  }
+  myGLCD.print("ETH",232,1);
+}
+
 void printPulsanti() {
   //icona indietro
   myGLCD.drawBitmap(280,45,30,30,arrow);
@@ -421,120 +631,33 @@ void printPulsanti() {
   //myGLCD.drawBitmap(280,132,30,30,settings);
 }
 
-void grafico () {
-  schermata=2;
-  flashBar=true;
-  mSecFlash=0;
-
-  //Titolo
-  myGLCD.setFont(franklingothic_normal);
-  myGLCD.setColor(255, 165, 0); //Arancione
-  myGLCD.fillRect(0, 0, 319, 20);
-  myGLCD.setColor(255, 255, 255); //Bianco
-  myGLCD.setBackColor(255, 165, 0); //Arancione
-  myGLCD.print("PRESSIONE", CENTER, 1);
-
-  //'sfondo'
-  myGLCD.setColor(255,255,255); 
-  myGLCD.fillRect(0, 21, 319, 220);
-
-  //rettangolo grafico
-  myGLCD.setColor(0,0,0);
-  myGLCD.drawRect(48, 24, 272, 192);
-
-  //8 riga - pressione
-  myGLCD.setFont(SmallFont);
-  myGLCD.setColor(255, 255, 255); //Bianco
-  myGLCD.setBackColor(0,0,0);
-  //myGLCD.print("1234567890123456789012345678901234567890"
-  myGLCD.print("      -24 -12  -6  -3  -1 ora  +1      ", CENTER, 202);
-  //righe griglia
-  myGLCD.setColor(0, 0, 0);
-  myGLCD.drawLine(80, 24, 80, 192);
-  myGLCD.drawLine(112, 24, 112, 192);
-  myGLCD.drawLine(144, 24, 144, 192);  
-  myGLCD.drawLine(176, 24, 176, 192);
-  myGLCD.drawLine(208, 24, 208, 192);
-  myGLCD.drawLine(240, 24, 240, 192);
-
-  float pressioni[7];
-  pressioni[0]=storico.getPress(-24);
-  pressioni[1]=storico.getPress(-12);
-  pressioni[2]=storico.getPress(-6);
-  pressioni[3]=storico.getPress(-3);
-  pressioni[4]=storico.getPress(-1);
-  pressioni[5]=currPress;
-  pressioni[6]=calcolaPrevisione(1);
-
-  int massimo = max (pressioni[0],pressioni[1]);
-  massimo = max (massimo,pressioni[2]);
-  massimo = max (massimo,pressioni[3]);
-  massimo = max (massimo,pressioni[4]);
-  massimo = max (massimo,pressioni[5]);
-  massimo = max (massimo,pressioni[6]);
-
-  int minimo = min (pressioni[0],pressioni[1]);
-  minimo = min (minimo,pressioni[2]);
-  minimo = min (minimo,pressioni[3]);
-  minimo = min (minimo,pressioni[4]);
-  minimo = min (minimo,pressioni[5]);
-  minimo = min (minimo,pressioni[6]);
-
-  int  media = (massimo + minimo )/2;
-  if(media > 1017) {
-    if(minimo<1005)
-      maxScala = 1020;
-    else if(massimo <1025)
-      maxScala = 1025;
-    else
-      maxScala = 1030;
-  }
-  else {
-    if(massimo>1025)
-      maxScala = 1030;
-    else if(massimo>1020)
-      maxScala = 1025;
-    else
-      maxScala = 1020;
-  }
-
-  /*if(massimo>1015)
-   maxScala = 1025;
-   else if(massimo<1015 & massimo>1005)
-   maxScala = 1020;
-   else if(massimo<1005)
-   maxScala = 1015;
-   */
-  drawPressBar(-24,pressioni[0]);
-  drawPressBar(-12,pressioni[1]);
-  drawPressBar(-6,pressioni[2]);
-  drawPressBar(-3,pressioni[3]);
-  drawPressBar(-1,pressioni[4]);
-  drawPressBar(0,pressioni[5]);
-  drawPressBar(1,pressioni[6]);
-
-  //1020hpa grafico
-  myGLCD.setColor(0, 0, 0); //Nero
-  myGLCD.setBackColor(255,255,255);
-  myGLCD.printNumI(maxScala, 16, 26);
-  //1015hpa gr
-  myGLCD.setColor(0, 0, 0); //Bianco
-  myGLCD.printNumI((maxScala-5), 16, 62);
-  myGLCD.drawLine(49, 66, 271, 66);
-  //1010hpa grafico
-  myGLCD.setColor(0, 0, 0); //Bianco
-  myGLCD.printNumI((maxScala-10), 16, 104);
-  myGLCD.drawLine(49, 108, 271, 108);
-  //1005hpa gr
-  myGLCD.setColor(0, 0, 0); //Bianco
-  myGLCD.printNumI((maxScala-15), 16, 146);
-  myGLCD.drawLine(49, 150, 271, 150);
-  //1000hpa grafico
-  myGLCD.setColor(0, 0, 0); //Bianco
-  myGLCD.printNumI((maxScala-20), 16, 185);
-
-  printPulsanti(); 
-  printDataOra(true);
+void flashPrevision(){
+  if(schermata==2) {
+    if(flashBar) {
+      if(mSecFlash==0) {
+        drawPressBar(1,calcolaPrevisione(1));
+        mSecFlash+=1;
+      }
+      else if(mSecFlash<100)
+        mSecFlash+=1;
+      else {
+        flashBar=false;
+        mSecFlash=0;
+      }
+    }
+    else {
+      if(mSecFlash==0) {
+        drawEmptyBar(1);
+        mSecFlash+=1;
+      }
+      else if(mSecFlash<50)
+        mSecFlash+=1;
+      else {
+        flashBar=true;
+        mSecFlash=0;
+      }
+    }
+  } 
 }
 
 void drawEmptyBar(int8_t ora) {

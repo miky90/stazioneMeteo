@@ -40,7 +40,16 @@ void setPressione()
   myGLCD.print("Altitudine:", 10, 40);
   //myGLCD.print(":", 154, 40);
   //myGLCD.print(":", 202, 40);
-  //myGLCD.print("Salva Pressioni:", 10, 140);
+  //myGLCD.print("Carica Sd:", 10, 140);
+  //pulsante
+  myGLCD.setColor(64, 64, 128);
+  myGLCD.fillRoundRect(10, 110, 122, 170);
+  myGLCD.setColor(128, 128, 255);
+  myGLCD.drawRoundRect(10, 110, 122, 170);
+  myGLCD.setColor(255, 255, 255);
+  myGLCD.setBackColor(64, 64, 128);
+  myGLCD.print("Inizializza SD", 20, 140);
+  myGLCD.setBackColor(255, 255, 255);
   //myGLCD.print(".", 154, 140);
   //myGLCD.print(".", 202, 140);
   

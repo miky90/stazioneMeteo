@@ -1,11 +1,12 @@
 /*
 *  Name:      Applicazione METEO 
-*  Hardware:  Arduino MEGA 2560 
-*             TFT01_3.2 Schermo TFT 320x240 with SD cardReader
-*             TFT Shield v.1.2
-*             NRF2401L+ on SPI connection (see below)
-*  Data:      16/05/2014
-*/
+ *  Hardware:  Arduino MEGA 2560 
+ *             TFT01_3.2 Schermo TFT 320x240 with SD cardReader
+ *             TFT Shield v.1.2
+ *             NRF2401L+ on SPI connection (see below)
+ *             ENC28J60 on SPI connection (see below)
+ *  Data:      16/05/2014
+ */
 
 //Connect the nRF24L01 to Arduino like this. Use these same connections for Teensy 3.1.
 // 
@@ -17,6 +18,20 @@
 //        MOSI pin D51----------SDI   (SPI Data in)
 //        MISO pin D50----------SDO   (SPI data out)
 //                              IRQ   (Interrupt output, not connected)
+//                 GND----------GND   (ground in)
+//
+//Connect the ENC28J60 to Arduino like this.
+//
+//                 Arduino      ENC28J60
+//                 3V3----------VCC
+//             pin RESET--------RESET
+//          SS pin D47----------CS    (chip select in)
+//         SCK pin D52----------SCK   (SPI clock in)
+//        MOSI pin D51----------SI    (SPI Data in)
+//        MISO pin D50----------SO    (SPI data out)
+//             pin D43----------INT   ()
+//                              WDL   (not connected)
+//                              CLKOUT(not connected)
 //                 GND----------GND   (ground in)
 //
 #include <avr/wdt.h>
@@ -31,10 +46,12 @@
 #include "DHT.h"
 #include <StoricoDati.h>
 #include <Time.h>
+#include <Timezone.h>
 #include <SunLight.h>
 #include <tinyFAT.h>
 #include <UTFT_tinyFAT.h>
 #include <SunLight.h>
+#include <EtherCard.h>
 
 //#include <avr/pgmspace.h>
 
@@ -48,15 +65,16 @@ extern uint8_t franklingothic_normal[];
 //Image Files
 extern prog_uint16_t settings[0x384];
 extern prog_uint16_t arrow[0x384];
-char* images[]={"MET0.RAW", "MET1.RAW", "MET2.RAW", "MET3.RAW", "MET4.RAW", "MET5.RAW" };
+char* images[]={
+  "MET0.RAW", "MET1.RAW", "MET2.RAW", "MET3.RAW", "MET4.RAW", "MET5.RAW" };
 /*
      MET0.RAW --- sereno         giorno
-     MET1.RAW --- poco nuvoloso  giorno
-     MET2.RAW --- pioggia debole giorno
-     MET3.RAW --- sereno         notte
-     MET4.RAW --- poco nuvoloso  notte
-     MET5.RAW --- pioggia debole notte
-*/
+ MET1.RAW --- poco nuvoloso  giorno
+ MET2.RAW --- pioggia debole giorno
+ MET3.RAW --- sereno         notte
+ MET4.RAW --- poco nuvoloso  notte
+ MET5.RAW --- pioggia debole notte
+ */
 
 //VARIABILI
 //set pin numbers:
@@ -65,6 +83,13 @@ const uint8_t backlightPin = 9;   // number of backlight tft pin
 const uint8_t wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4    
 
 uint8_t storicoToSd = 0;          // 1 se l'arduino deve salvare lo storico su sd, 0 altrimenti
+
+// TimeZone : United Kingdom (London, Belfast)
+TimeChangeRule BST = {
+  "BST", Last, Sun, Mar, 3, 120};        //British Summer Time
+TimeChangeRule GMT = {
+  "GMT", Last, Sun, Oct, 3, 60};         //Standard Time
+Timezone UK(BST, GMT);
 
 int wakeCount =0;
 int cycleNum;
@@ -75,16 +100,19 @@ int cycleNum;
 
 //richiesta di wakeUp 
 volatile uint8_t wakeStatus = 0;  // variable to store a request for wakeUp
-                              // 1 - wifi
-                              // 2 - button
+// 1 - wifi
+// 2 - button
 //parametri interfaccia
 boolean buttonState = false;  //stato del pulsante true = premuto
 boolean lcdActive = true;     //diventa false dopo un minuto di inattività
 int inattivita = 0;           //tempo di inattività
 uint8_t schermata = 0;            /*! 1 - Situazione Attuale
-                               *  2 - Grafico pressione
-                               *  3 - Schermata esterno
-                               */                               
+ *  2 - Grafico pressione
+ *  3 - Schermata esterno
+ *  4 - Menu scelta schermata esterno
+ *  5 - Grafico temperatura
+ */
+
 //variabili per far lampeggiare la colonna della previsione +1
 boolean flashBar = true;
 int maxScala = 1000;
@@ -109,6 +137,7 @@ float currInTemp=0.0;         //temperatura corrente letta dal sensoro interno
 
 //Variabili SD
 uint8_t sdAviable = 0;            //sd disponibile
+uint8_t ethAviable = 0;           //ethernet disponibile
 
 // Variabili orologio
 boolean puntini = true;
@@ -137,50 +166,70 @@ float myLatitude = 45.39;
 // Permits data beetween 0 and 60 and the unit of measurement is minutes
 uint8_t twilight_minutes = 10;
 // The array where will be saved variables of sunrise and sunset
-  // with the following form:
-  // timeArray[ Rise_hours, Rise_minutes, Set_hours, Set_minutes ]
-  // if you want you can use specially created index:
-  // SUNRISE_H SUNRISE_M SUNSET_H SUNSET_M
+// with the following form:
+// timeArray[ Rise_hours, Rise_minutes, Set_hours, Set_minutes ]
+// if you want you can use specially created index:
+// SUNRISE_H SUNRISE_M SUNSET_H SUNSET_M
 uint8_t timeArray[4];
+
+//Ethernet
+static byte mac[] = {
+  0x00,0x50,0x56,0xAE,0xB3,0xA6};
+static byte ip[] = {
+  192,168,1,150};
+static byte gw[] = {
+  192,168,1,1};
+static byte dns[] = {
+  192,168,1,1};
+static byte mask[] = {
+  255,255,255,0};
+static uint8_t ntpServer[4] = { 
+  130, 159, 196, 117 }; 
+static uint8_t ntpMyPort = 123; 
+byte Ethernet::buffer[700];
+
+static char website[] PROGMEM= "www.web-plus.it"; // www.TUO_SITO_WEB.it
+static char buffer[70];
+
+unsigned long time_last = 0; 
+boolean flag;
+byte interval = 2; // seconds - intervello di tempo tra un invio di dati ed il successivo verso il server
+
+#define ENC28J60_CS 10
 
 void setup()
 {
   randomSeed(analogRead(0));
- 
+
   pinMode(53,OUTPUT);        //Pin sd ss
   file.setSSpin(53);
-  
+
   pinMode(backlightPin,OUTPUT);    // inizialize the backlight pin as output
   backlightOff();                  // set initial state of backlight
-  
+
   pinMode(buttonPin, INPUT);       // initialize the pushbutton pin as an input 
   pinMode(wakePinWifi, INPUT_PULLUP);
   
-  attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
-                                      // buttonPressed when pin 5 goes from low to high 
-  //attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
-                                      // wakeUpNow when pin 4 goes from low to high 
-
   cycleNum = (int)(STANBY_SEC/8-STANBY_SEC/95);
   wakeCount=0;
-  
+
   //Setup the LCD
   myGLCD.InitLCD();
   myGLCD.setFont(franklingothic_normal);
   myGLCD.clrScr();
   backlightOn();    //Accendo retroilluminazione
   myGLCD.print("LOADING...", CENTER, 110);
-  
+
   altitudine=readAltitude();
   //altitudine=30;
-  
+
   //inizializza comunicazione seriale
   Serial.begin(115200);
   Serial.println("***** REBOOT... *****");
   Serial.println("");
-  
+
   //Setup SD
-  byte res = file.initFAT(SPISPEED_VERYHIGH);
+  byte res = file.initFAT(); //SPISPEED_VERYHIGH
   if (res==NO_ERROR) {
     sdAviable=1;
     Serial.println("SD correctly inizialized");
@@ -189,17 +238,17 @@ void setup()
     Serial.print("***** ERROR: ");
     Serial.println(verboseError(res));
   }
-  
+
   //Setup TouchScreen
   myTouch.InitTouch();
   myTouch.setPrecision(PREC_HI);
-  
+
   // Set the clock to run-mode
   rtc.halt(false);
-  
+
   //setup DHT
   dht.setup(45);
-  
+
   //Setup NRF24 Wifi board
   if (!nrf24.init())
     Serial.println("init failed");
@@ -208,67 +257,83 @@ void setup()
     Serial.println("setChannel failed");
   if (!nrf24.setRF(RH_NRF24::DataRate250kbps, RH_NRF24::TransmitPower0dBm))
     Serial.println("setRF failed");  
-   
+
   t = rtc.getTime();
   oldDataSaved=t;
   if(t.hour==0)
     oldDataSaved.hour=23;
   else
     oldDataSaved.hour=t.hour-1;
-  
-  retriveFromSd();
-  printListFile();
-  
+
+  //retriveFromSd();
+  //printListFile();
+  //Setup Ethernet
+  ethAviable = inizializeEth();
+  //regolo ora da internet
+  regolaOraFromNtp(); 
+
   aggiornaDati();
   printMain();      //paint schermata iniziale
+  attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
+  // buttonPressed when pin 5 goes from low to high 
+  //attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
+  // wakeUpNow when pin 4 goes from low to high
+  
+  Serial.print("Setup eseguito in :");
+  Serial.print(millis()/1000);
+  Serial.println("s");
+  Serial.println();
 }
 
 void loop()
 {
-    while(true) 
-    {
-      
-      if(wakeStatus==2) {
-        wakeStatus=0;
-        buttonPressed();
+  while(true) 
+  {
+    if(wakeStatus==2) {
+      wakeStatus=0;
+      buttonPressed();
+    }
+    if(lcdActive) {
+      if(nrf24.available()) {
+        //dataAviable=false;
+        aggiornaDati();
       }
-      if(lcdActive) {
+      checkDataOra();
+      touchInterface();         //eseguo interfaccia touch
+      flashPrevision();
+      if(inattivita==5000&schermata!=1)    //dopo 3000 di inattivita se sono su una schermata diversa dalla principale
+        printMain();
+      else if(inattivita==8000)              //dopo 5000 di inattivita
+      {
+        backlightOff();                    //spengo retroilluminazione 
+        myGLCD.lcdOff();                   //metto in stand-By lo schermo
+        lcdActive=false;
+        sleepNow();
+      }
+      delay(10);
+    }
+    else {
+      if(wakeCount==(cycleNum-1)) {
         if(nrf24.available()) {
-          //dataAviable=false;
+          //Serial.println("Dati disp");
+          wakeCount=0;
           aggiornaDati();
-        }
-        checkDataOra();
-        touchInterface();         //eseguo interfaccia touch
-        flashPrevision();
-        if(inattivita==5000&schermata!=1)    //dopo 3000 di inattivita se sono su una schermata diversa dalla principale
-          printMain();
-        else if(inattivita==8000)              //dopo 5000 di inattivita
-        {
-          backlightOff();                    //spengo retroilluminazione 
-          myGLCD.lcdOff();                   //metto in stand-By lo schermo
-          lcdActive=false;
           sleepNow();
         }
-        delay(10);
       }
       else {
-        if(wakeCount==(cycleNum-1)) {
-          if(nrf24.available()) {
-            Serial.println("Dati disp");
-            wakeCount=0;
-            aggiornaDati();
-            sleepNow();
-          }
-        }
-        else {
-          Serial.print("No Dati disp: ");
-          Serial.println(wakeCount);
-          delay(100);
-          wakeCount++;
-          sleepNow();
-        }
+        //Serial.print("No Dati disp: ");
+        //Serial.println(wakeCount);
+        delay(100);
+        wakeCount++;
+        sleepNow();
       }
     }
+    ether.packetLoop(ether.packetReceive());
+    if(!ethAviable & Ethernet::isLinkUp()){
+      ethAviable = inizializeEth();
+    }
+  }
 }
 
 void wakeUpNowWifi()        // here the interrupt is handled after wakeup
@@ -283,10 +348,10 @@ void wakeUpNowButton()        // here the interrupt is handled after wakeup
 {
   wakeStatus = 2;
   //buttonState = digitalRead(buttonPin);    // read the state of the pushbutton value
-    //if (wakeStatus == 2)
-    //{
-  
-    //}
+  //if (wakeStatus == 2)
+  //{
+
+  //}
   // execute code here after wake-up before returning to the loop() function
   // timers and code using timers (serial.print and more...) will not work here.
   // we don't really need to execute any special functions here, since we
@@ -295,71 +360,71 @@ void wakeUpNowButton()        // here the interrupt is handled after wakeup
 
 void sleepNow()         // here we put the arduino to sleep
 {
-    /* Now is the time to set the sleep mode. In the Atmega8 datasheet
-     * http://www.atmel.com/dyn/resources/prod_documents/doc2486.pdf on page 35
-     * there is a list of sleep modes which explains which clocks and 
-     * wake up sources are available in which sleep mode.
-     *
-     * In the avr/sleep.h file, the call names of these sleep modes are to be found:
-     *
-     * The 5 different modes are:
-     *     SLEEP_MODE_IDLE         -the least power savings 
-     *     SLEEP_MODE_ADC
-     *     SLEEP_MODE_PWR_SAVE
-     *     SLEEP_MODE_STANDBY
-     *     SLEEP_MODE_PWR_DOWN     -the most power savings
-     *
-     * For now, we want as much power savings as possible, so we 
-     * choose the according 
-     * sleep mode: SLEEP_MODE_PWR_DOWN
-     * 
-     */  
-    set_sleep_mode(SLEEP_MODE_PWR_SAVE);   // sleep mode is set here
+  /* Now is the time to set the sleep mode. In the Atmega8 datasheet
+   * http://www.atmel.com/dyn/resources/prod_documents/doc2486.pdf on page 35
+   * there is a list of sleep modes which explains which clocks and 
+   * wake up sources are available in which sleep mode.
+   *
+   * In the avr/sleep.h file, the call names of these sleep modes are to be found:
+   *
+   * The 5 different modes are:
+   *     SLEEP_MODE_IDLE         -the least power savings 
+   *     SLEEP_MODE_ADC
+   *     SLEEP_MODE_PWR_SAVE
+   *     SLEEP_MODE_STANDBY
+   *     SLEEP_MODE_PWR_DOWN     -the most power savings
+   *
+   * For now, we want as much power savings as possible, so we 
+   * choose the according 
+   * sleep mode: SLEEP_MODE_PWR_DOWN
+   * 
+   */
+  set_sleep_mode(SLEEP_MODE_PWR_SAVE);   // sleep mode is set here
 
-    sleep_enable();          // enables the sleep bit in the mcucr register
-                             // so sleep is possible. just a safety pin 
+  sleep_enable();          // enables the sleep bit in the mcucr register
+  // so sleep is possible. just a safety pin 
 
-    /* Now it is time to enable an interrupt. We do it here so an 
-     * accidentally pushed interrupt button doesn't interrupt 
-     * our running program. if you want to be able to run 
-     * interrupt code besides the sleep function, place it in 
-     * setup() for example.
-     * 
-     * In the function call attachInterrupt(A, B, C)
-     * A   can be either 0 or 1 for interrupts on pin 2 or 3.   
-     * 
-     * B   Name of a function you want to execute at interrupt for A.
-     *
-     * C   Trigger mode of the interrupt pin. can be:
-     *             LOW        a low level triggers
-     *             CHANGE     a change in level triggers
-     *             RISING     a rising edge of a level triggers
-     *             FALLING    a falling edge of a level triggers
-     *
-     * In all but the IDLE sleep modes only LOW can be used.
-     */
-    
-    attachInterrupt(5, wakeUpNowButton, RISING); // use interrupt 5 (pin 18) and run function
-                                      // wakeUpNow when pin 5 goes from low to high 
-    //attachInterrupt(4, wakeUpNowWifi, RISING); // use interrupt 4 (pin 19) and run function                     
-    wdt_reset();
-    myWatchdogEnable();
-    Serial.println("...going to sleep.");
-    delay(100);
-    sleep_mode();            // here the device is actually put to sleep!!
-                             // THE PROGRAM CONTINUES FROM HERE AFTER WAKING UP
-    sleep_disable();         // first thing after waking from sleep:
-                             // disable sleep...
-    detachInterrupt(5);      // disables interrupt 5 on pin 18 so the 
-                             // wakeUpNow code will not be executed 
-                             // during normal running time.
-    //detachInterrupt(4);      // disables interrupt 4 on pin 19 so the 
-                             // wakeUpNow code will not be executed 
-                             // during normal running time.
-    attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
-                                      // buttonPressed when pin 5 goes from low to high 
-    //attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
-                                      // wakeUpNow when pin 4 goes from low to high 
+  /* Now it is time to enable an interrupt. We do it here so an 
+   * accidentally pushed interrupt button doesn't interrupt 
+   * our running program. if you want to be able to run 
+   * interrupt code besides the sleep function, place it in 
+   * setup() for example.
+   * 
+   * In the function call attachInterrupt(A, B, C)
+   * A   can be either 0 or 1 for interrupts on pin 2 or 3.   
+   * 
+   * B   Name of a function you want to execute at interrupt for A.
+   *
+   * C   Trigger mode of the interrupt pin. can be:
+   *             LOW        a low level triggers
+   *             CHANGE     a change in level triggers
+   *             RISING     a rising edge of a level triggers
+   *             FALLING    a falling edge of a level triggers
+   *
+   * In all but the IDLE sleep modes only LOW can be used.
+   */
+
+  attachInterrupt(5, wakeUpNowButton, RISING); // use interrupt 5 (pin 18) and run function
+  // wakeUpNow when pin 5 goes from low to high 
+  //attachInterrupt(4, wakeUpNowWifi, RISING); // use interrupt 4 (pin 19) and run function                     
+  wdt_reset();
+  myWatchdogEnable();
+  //Serial.println("...going to sleep.");
+  delay(100);
+  sleep_mode();            // here the device is actually put to sleep!!
+  // THE PROGRAM CONTINUES FROM HERE AFTER WAKING UP
+  sleep_disable();         // first thing after waking from sleep:
+  // disable sleep...
+  detachInterrupt(5);      // disables interrupt 5 on pin 18 so the 
+  // wakeUpNow code will not be executed 
+  // during normal running time.
+  //detachInterrupt(4);      // disables interrupt 4 on pin 19 so the 
+  // wakeUpNow code will not be executed 
+  // during normal running time.
+  attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
+  // buttonPressed when pin 5 goes from low to high 
+  //attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
+  // wakeUpNow when pin 4 goes from low to high 
 }
 
 void wifiInterrupt() {
@@ -369,17 +434,18 @@ void wifiInterrupt() {
 void buttonPressed() {
   if(lcdActive){
     if(schermata!=1) 
-      { inattivita=0;
-        printMain();
-      }
+    { 
+      inattivita=0;
+      printMain();
+    }
   }
   else
   {
-        inattivita=0;
-        myGLCD.lcdOn();
-        lcdActive=true;
-        backlightOn();
-        printMain();  
+    inattivita=0;
+    myGLCD.lcdOn();
+    lcdActive=true;
+    backlightOn();
+    printMain();  
   }
 }
 
@@ -387,7 +453,7 @@ ISR(WDT_vect)
 {
   cli();
   wdt_disable();
-  Serial.println("wakeup!");
+  //Serial.println("wakeup!");
   sei();
 }
 
@@ -400,3 +466,4 @@ void myWatchdogEnable() {  // turn on watchdog timer; interrupt mode every 2.0s
   WDTCSR = B01100001;  // 8 second WDT 
   sei();
 }
+
