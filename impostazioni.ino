@@ -1,5 +1,6 @@
 void setPressione()
 {
+  schermata = 4;
   int t_alt;
   int x, y;
   int res = 0;
@@ -48,7 +49,7 @@ void setPressione()
   myGLCD.drawRoundRect(10, 110, 122, 170);
   myGLCD.setColor(255, 255, 255);
   myGLCD.setBackColor(64, 64, 128);
-  myGLCD.print("Inizializza SD", 20, 140);
+  myGLCD.print("Init SD", 20, 140);
   myGLCD.setBackColor(255, 255, 255);
   //myGLCD.print(".", 154, 140);
   //myGLCD.print(".", 202, 140);
@@ -94,7 +95,7 @@ void setPressione()
   {
     myGLCD.printNumI(t_alt, 220, 40);
   }
-  while (res==0)
+  while (res==0 & schermata == 4)
   {
     if (myTouch.dataAvailable())
     {
@@ -450,19 +451,20 @@ void setPressione()
       }
     }
   }
+  if(schermata == 4) {
+    waitForTouchRelease();
   
-  waitForTouchRelease();
-
-  if (res==1)
-  {
-    if (ct)
-      saveAltitude(t_alt);
-//    if (cd)
-//    {
-//      rtc.setDate(t_temp.date, t_temp.mon, t_temp.year);
-//      rtc.setDOW(t_temp.dow);
-//    }
+    if (res==1)
+    {
+      if (ct)
+        saveAltitude(t_alt);
+  //    if (cd)
+  //    {
+  //      rtc.setDate(t_temp.date, t_temp.mon, t_temp.year);
+  //      rtc.setDOW(t_temp.dow);
+  //    }
+    }
+    
+    printMain();
   }
-  
-  printMain();
 }

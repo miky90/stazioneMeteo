@@ -20,19 +20,6 @@
 //                              IRQ   (Interrupt output, not connected)
 //                 GND----------GND   (ground in)
 //
-//Connect the ENC28J60 to Arduino like this.
-//
-//                 Arduino      ENC28J60
-//                 3V3----------VCC
-//             pin RESET--------RESET
-//          SS pin D47----------CS    (chip select in)
-//         SCK pin D52----------SCK   (SPI clock in)
-//        MOSI pin D51----------SI    (SPI Data in)
-//        MISO pin D50----------SO    (SPI data out)
-//             pin D43----------INT   ()
-//                              WDL   (not connected)
-//                              CLKOUT(not connected)
-//                 GND----------GND   (ground in)
 //
 #include <avr/wdt.h>
 #include <avr/sleep.h>
@@ -41,19 +28,18 @@
 #include <UTFT.h>
 #include <UTouch.h>
 #include <SPI.h>
-#include <DS1307.h>
-#include <RH_NRF24.h>
+#include <Wire.h>
+#include <Time.h>
+#include <DS1307RTC.h>
+#include <RF24Network.h>
+#include <RF24.h>
 #include "DHT.h"
 #include <StoricoDati.h>
-#include <Time.h>
 #include <Timezone.h>
 #include <SunLight.h>
 #include <tinyFAT.h>
 #include <UTFT_tinyFAT.h>
 #include <SunLight.h>
-#include <EtherCard.h>
-
-//#include <avr/pgmspace.h>
 
 
 //Fonts
@@ -68,7 +54,7 @@ extern prog_uint16_t arrow[0x384];
 char* images[]={
   "MET0.RAW", "MET1.RAW", "MET2.RAW", "MET3.RAW", "MET4.RAW", "MET5.RAW" };
 /*
-     MET0.RAW --- sereno         giorno
+ MET0.RAW --- sereno         giorno
  MET1.RAW --- poco nuvoloso  giorno
  MET2.RAW --- pioggia debole giorno
  MET3.RAW --- sereno         notte
@@ -76,11 +62,16 @@ char* images[]={
  MET5.RAW --- pioggia debole notte
  */
 
+extern 
 //VARIABILI
+
+#define MY_ADDRESS 01
+#define MASTER_ADDRESS 00
+
 //set pin numbers:
-const uint8_t buttonPin = 18;     // the number of the pushbutton pin /Interrupt 5
-const uint8_t backlightPin = 9;   // number of backlight tft pin
-const uint8_t wakePinWifi = 19;   // intrrupt from wifi - Interrupt 4    
+#define BUTTON_PIN 18     // the number of the pushbutton pin /Interrupt 5
+#define BACKLIGHT_PIN 9   // number of backlight tft pin
+#define WAKE_WIFI_PIN 19   // intrrupt from wifi - Interrupt 4    
 
 uint8_t storicoToSd = 0;          // 1 se l'arduino deve salvare lo storico su sd, 0 altrimenti
 
@@ -93,7 +84,7 @@ Timezone UK(BST, GMT);
 
 int wakeCount =0;
 int cycleNum;
-#define STANBY_SEC 300
+#define STANBY_SEC 150
 
 //Indirizzi EEPROM
 //0,1 altitudine  
@@ -109,8 +100,8 @@ int inattivita = 0;           //tempo di inattività
 uint8_t schermata = 0;            /*! 1 - Situazione Attuale
  *  2 - Grafico pressione
  *  3 - Schermata esterno
- *  4 - Menu scelta schermata esterno
- *  5 - Grafico temperatura
+ *  4 - Impostazioni
+ *  5 - Setting ora
  */
 
 //variabili per far lampeggiare la colonna della previsione +1
@@ -123,10 +114,8 @@ float secAggWifi = 0.0;       //secondi dall'ultimo aggiornamento dei dati meteo
 boolean firstConnection=true; //prima connessione con stazione esterna
 boolean errorConnection=false; //errore nella connessione della stazione esterna
 double altitudine;
-float currPress= 0.0;          //pressione corrente letta dai sensori esterni 
-char* currStrHum="--";        //stringa umidità corrente  
+float currPress= 0.0;          //pressione corrente letta dai sensori esterni  
 float currHum = 0.0;          //umidita corrente letta dai sensori esterni 
-char* currStrTemp="--.-";     //stringa temperatura corrente
 float currTemp = 0.0;         //temperatura corrente letta dai sensori esterni 
 
 StoricoDati storico; //Storico dati
@@ -137,20 +126,23 @@ float currInTemp=0.0;         //temperatura corrente letta dal sensoro interno
 
 //Variabili SD
 uint8_t sdAviable = 0;            //sd disponibile
-uint8_t ethAviable = 0;           //ethernet disponibile
+uint8_t errorNetConnection = 0;      //errore connessione mosulo rete
 
 // Variabili orologio
 boolean puntini = true;
 int oldMin=0;                 //ultimo minuto stampato 
-Time  t;                      // Init a Time-data structure
-Time oldDataSaved;
+time_t oldDataSaved;
 
 //COSTRUTTORI
 UTFT myGLCD(TFT01_32,38,39,40,41); 	//Display TFT
 UTouch  myTouch(6,5,4,3,2);        	//TouchScreen
-RH_NRF24 nrf24(8,49);              	//Singleton instance of the radio driver
-DHT dht;						   	//Sensore Temperatura
-DS1307 rtc(20, 21);					//Orologio
+
+RF24 radio(8,49);             	        //Singleton instance of the radio driver
+// Network uses that radio
+RF24Network network(radio);
+
+DHT dht;                                //Sensore Temperatura
+//DS1307 rtc(20, 21);			//Orologio
 
 UTFT_tinyFAT myFiles(&myGLCD);
 
@@ -172,44 +164,25 @@ uint8_t twilight_minutes = 10;
 // SUNRISE_H SUNRISE_M SUNSET_H SUNSET_M
 uint8_t timeArray[4];
 
-//Ethernet
-static byte mac[] = {
-  0x00,0x50,0x56,0xAE,0xB3,0xA6};
-static byte ip[] = {
-  192,168,1,150};
-static byte gw[] = {
-  192,168,1,1};
-static byte dns[] = {
-  192,168,1,1};
-static byte mask[] = {
-  255,255,255,0};
-static uint8_t ntpServer[4] = { 
-  130, 159, 196, 117 }; 
-static uint8_t ntpMyPort = 123; 
-byte Ethernet::buffer[700];
-
-static char website[] PROGMEM= "www.web-plus.it"; // www.TUO_SITO_WEB.it
-static char buffer[70];
-
-unsigned long time_last = 0; 
-boolean flag;
-byte interval = 2; // seconds - intervello di tempo tra un invio di dati ed il successivo verso il server
-
-#define ENC28J60_CS 10
 
 void setup()
 {
   randomSeed(analogRead(0));
-
+  SPI.begin();
+  
+  // Set the clock to run-mode
+  //rtc.halt(false);
+  setSyncProvider(RTC.get); 
+  
   pinMode(53,OUTPUT);        //Pin sd ss
   file.setSSpin(53);
-
-  pinMode(backlightPin,OUTPUT);    // inizialize the backlight pin as output
+  
+  pinMode(BACKLIGHT_PIN,OUTPUT);    // inizialize the backlight pin as output
   backlightOff();                  // set initial state of backlight
 
-  pinMode(buttonPin, INPUT);       // initialize the pushbutton pin as an input 
-  pinMode(wakePinWifi, INPUT_PULLUP);
-  
+  pinMode(BUTTON_PIN, INPUT);       // initialize the pushbutton pin as an input 
+  pinMode(WAKE_WIFI_PIN, INPUT_PULLUP);
+
   cycleNum = (int)(STANBY_SEC/8-STANBY_SEC/95);
   wakeCount=0;
 
@@ -243,42 +216,30 @@ void setup()
   myTouch.InitTouch();
   myTouch.setPrecision(PREC_HI);
 
-  // Set the clock to run-mode
-  rtc.halt(false);
-
   //setup DHT
   dht.setup(45);
 
-  //Setup NRF24 Wifi board
-  if (!nrf24.init())
-    Serial.println("init failed");
-  // Defaults after init are 2.402 GHz (channel 2), 2Mbps, 0dBm
-  if (!nrf24.setChannel(10))
-    Serial.println("setChannel failed");
-  if (!nrf24.setRF(RH_NRF24::DataRate250kbps, RH_NRF24::TransmitPower0dBm))
-    Serial.println("setRF failed");  
+  radio.begin();
+  network.begin(/*channel*/ 10, /*node address*/ MY_ADDRESS);
 
-  t = rtc.getTime();
-  oldDataSaved=t;
-  if(t.hour==0)
-    oldDataSaved.hour=23;
-  else
-    oldDataSaved.hour=t.hour-1;
+  oldDataSaved = now();
+  oldDataSaved-=3600;
 
   //retriveFromSd();
   //printListFile();
   //Setup Ethernet
-  ethAviable = inizializeEth();
+  //ethAviable = inizializeEth();
   //regolo ora da internet
-  regolaOraFromNtp(); 
+  //regolaOraFromNtp(); 
 
-  aggiornaDati();
-  printMain();      //paint schermata iniziale
   attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
   // buttonPressed when pin 5 goes from low to high 
   //attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
   // wakeUpNow when pin 4 goes from low to high
   
+  //paint schermata iniziale
+  printMain();
+  aggiornaDati();
   Serial.print("Setup eseguito in :");
   Serial.print(millis()/1000);
   Serial.println("s");
@@ -289,12 +250,14 @@ void loop()
 {
   while(true) 
   {
+    // Pump the network regularly
+    network.update();
     if(wakeStatus==2) {
       wakeStatus=0;
       buttonPressed();
     }
     if(lcdActive) {
-      if(nrf24.available()) {
+      if(network.available()) {
         //dataAviable=false;
         aggiornaDati();
       }
@@ -314,7 +277,7 @@ void loop()
     }
     else {
       if(wakeCount==(cycleNum-1)) {
-        if(nrf24.available()) {
+        if(network.available()) {
           //Serial.println("Dati disp");
           wakeCount=0;
           aggiornaDati();
@@ -324,14 +287,10 @@ void loop()
       else {
         //Serial.print("No Dati disp: ");
         //Serial.println(wakeCount);
-        delay(100);
+        //delay(100);
         wakeCount++;
         sleepNow();
       }
-    }
-    ether.packetLoop(ether.packetReceive());
-    if(!ethAviable & Ethernet::isLinkUp()){
-      ethAviable = inizializeEth();
     }
   }
 }
@@ -466,4 +425,5 @@ void myWatchdogEnable() {  // turn on watchdog timer; interrupt mode every 2.0s
   WDTCSR = B01100001;  // 8 second WDT 
   sei();
 }
+
 

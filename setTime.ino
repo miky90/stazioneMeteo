@@ -22,7 +22,7 @@ void drawDownButton(int x, int y)
 
 void showDOW(byte dow)
 {
-  char* str[] = {"MON","TUE","WED","THU","FRI","SAT","SUN"};
+  char* str[] = {"SUN","MON","TUE","WED","THU","FRI","SAT"};
   
   myGLCD.setColor(128, 128, 255);
   myGLCD.setBackColor(255, 255, 255);
@@ -103,24 +103,14 @@ byte validateDateForMonth(byte d, byte m, word y)
   }
   
   if (dc)
-  {
-    if (d<10)
-    {
-      myGLCD.printNumI(0, 122, 140);
-      myGLCD.printNumI(d, 138, 140);
-    }
-    else
-    {
-      myGLCD.printNumI(d, 122, 140);
-    }
-  }
-  
+    myGLCD.printNumI(d, 122, 140, 2, '0');  
   return d;
 }
 
 void setClock()
 {
-  Time t_temp;
+  schermata = 5;
+  tmElements_t t_temp;
   int x, y;
   int res = 0;
   boolean ct=false;
@@ -180,69 +170,36 @@ void setClock()
   
   // Print current time and date
   myGLCD.setColor(0, 0, 0);
-  t_temp = rtc.getTime();
-  if (t_temp.date==0)
+  if (day()==0)
   {
-    t_temp.date=1;
-    t_temp.mon=1;
-    t_temp.year=2010;
-    t_temp.dow=5;
-    t_temp.hour=0;
-    t_temp.min=0;
-    t_temp.sec=0;
+    t_temp.Day=1;
+    t_temp.Month=1;
+    t_temp.Year=2010-1970;
+    t_temp.Wday=5;
+    t_temp.Hour=0;
+    t_temp.Minute=0;
+    t_temp.Second=0;
     ct=true;
     cd=true;
   }
+  else {
+    t_temp.Day=day();
+    t_temp.Month=month();
+    t_temp.Year=year()-1970;
+    t_temp.Wday=weekday();
+    t_temp.Hour=hour();
+    t_temp.Minute=minute();
+    t_temp.Second=second();
+  }
+  myGLCD.printNumI(t_temp.Hour, 122, 40,2,'0');
+  myGLCD.printNumI(t_temp.Minute, 170, 40,2,'0');
+  myGLCD.printNumI(t_temp.Second, 218, 40,2,'0');
+  myGLCD.printNumI(t_temp.Day, 122, 140,2,'0');
+  myGLCD.printNumI(t_temp.Month, 170, 140,2,'0');
+  myGLCD.printNumI(t_temp.Year+1970, 218, 140,4);
+  showDOW(t_temp.Wday);
   
-  if (t_temp.hour<10)
-  {
-    myGLCD.printNumI(0, 122, 40);
-    myGLCD.printNumI(t_temp.hour, 138, 40);
-  }
-  else
-  {
-    myGLCD.printNumI(t_temp.hour, 122, 40);
-  }
-  if (t_temp.min<10)
-  {
-    myGLCD.printNumI(0, 170, 40);
-    myGLCD.printNumI(t_temp.min, 186, 40);
-  }
-  else
-  {
-    myGLCD.printNumI(t_temp.min, 170, 40);
-  }
-  if (t_temp.sec<10)
-  {
-    myGLCD.printNumI(0, 218, 40);
-    myGLCD.printNumI(t_temp.sec, 234, 40);
-  }
-  else
-  {
-    myGLCD.printNumI(t_temp.sec, 218, 40);
-  }
-  if (t_temp.date<10)
-  {
-    myGLCD.printNumI(0, 122, 140);
-    myGLCD.printNumI(t_temp.date, 138, 140);
-  }
-  else
-  {
-    myGLCD.printNumI(t_temp.date, 122, 140);
-  }
-  if (t_temp.mon<10)
-  {
-    myGLCD.printNumI(0, 170, 140);
-    myGLCD.printNumI(t_temp.mon, 186, 140);
-  }
-  else
-  {
-    myGLCD.printNumI(t_temp.mon, 170, 140);
-  }
-  myGLCD.printNumI(t_temp.year, 218, 140);
-  showDOW(t_temp.dow);
-  
-  while (res==0)
+  while (res==0 & schermata == 5)
   {
     if (myTouch.dataAvailable())
     {
@@ -254,18 +211,10 @@ void setClock()
         if ((x>=122) && (x<=154))
         {
           buttonWait(122, 10);
-          t_temp.hour+=1;
-          if (t_temp.hour==24)
-            t_temp.hour=0;
-          if (t_temp.hour<10)
-          {
-            myGLCD.printNumI(0, 122, 40);
-            myGLCD.printNumI(t_temp.hour, 138, 40);
-          }
-          else
-          {
-            myGLCD.printNumI(t_temp.hour, 122, 40);
-          }
+          t_temp.Hour+=1;
+          if (t_temp.Hour==24)
+            t_temp.Hour=0;
+          myGLCD.printNumI(t_temp.Hour, 122, 40, 2, '0');
           if (ct==false)
           {
             ct=true;
@@ -279,18 +228,10 @@ void setClock()
         else if ((x>=170) && (x<=202))
         {
           buttonWait(170, 10);
-          t_temp.min+=1;
-          if (t_temp.min==60)
-            t_temp.min=0;
-          if (t_temp.min<10)
-          {
-            myGLCD.printNumI(0, 170, 40);
-            myGLCD.printNumI(t_temp.min, 186, 40);
-          }
-          else
-          {
-            myGLCD.printNumI(t_temp.min, 170, 40);
-          }
+          t_temp.Minute+=1;
+          if (t_temp.Minute==60)
+            t_temp.Minute=0;
+          myGLCD.printNumI(t_temp.Minute, 170, 40, 2, '0');
           if (ct==false)
           {
             ct=true;
@@ -304,18 +245,10 @@ void setClock()
         else if ((x>=218) && (x<=250))
         {
           buttonWait(218, 10);
-          t_temp.sec+=1;
-          if (t_temp.sec==60)
-            t_temp.sec=0;
-          if (t_temp.sec<10)
-          {
-            myGLCD.printNumI(0, 218, 40);
-            myGLCD.printNumI(t_temp.sec, 234, 40);
-          }
-          else
-          {
-            myGLCD.printNumI(t_temp.sec, 218, 40);
-          }
+          t_temp.Second+=1;
+          if (t_temp.Second==60)
+            t_temp.Second=0;
+          myGLCD.printNumI(t_temp.Second, 218, 40, 2, '0');
           if (ct==false)
           {
             ct=true;
@@ -332,18 +265,10 @@ void setClock()
         if ((x>=122) && (x<=154))
         {
           buttonWait(122, 61);
-          t_temp.hour-=1;
-          if (t_temp.hour==255)
-            t_temp.hour=23;
-          if (t_temp.hour<10)
-          {
-            myGLCD.printNumI(0, 122, 40);
-            myGLCD.printNumI(t_temp.hour, 138, 40);
-          }
-          else
-          {
-            myGLCD.printNumI(t_temp.hour, 122, 40);
-          }
+          t_temp.Hour-=1;
+          if (t_temp.Hour==255)
+            t_temp.Hour=23;
+          myGLCD.printNumI(t_temp.Hour, 122, 40, 2, '0');
           if (ct==false)
           {
             ct=true;
@@ -357,18 +282,10 @@ void setClock()
         else if ((x>=170) && (x<=202))
         {
           buttonWait(170, 61);
-          t_temp.min-=1;
-          if (t_temp.min==255)
-            t_temp.min=59;
-          if (t_temp.min<10)
-          {
-            myGLCD.printNumI(0, 170, 40);
-            myGLCD.printNumI(t_temp.min, 186, 40);
-          }
-          else
-          {
-            myGLCD.printNumI(t_temp.min, 170, 40);
-          }
+          t_temp.Minute-=1;
+          if (t_temp.Minute==255)
+            t_temp.Minute=59;
+          myGLCD.printNumI(t_temp.Minute, 170, 40, 2, '0');
           if (ct==false)
           {
             ct=true;
@@ -382,18 +299,10 @@ void setClock()
         else if ((x>=218) && (x<=250))
         {
           buttonWait(218, 61);
-          t_temp.sec-=1;
-          if (t_temp.sec==255)
-            t_temp.sec=59;
-          if (t_temp.sec<10)
-          {
-            myGLCD.printNumI(0, 218, 40);
-            myGLCD.printNumI(t_temp.sec, 234, 40);
-          }
-          else
-          {
-            myGLCD.printNumI(t_temp.sec, 218, 40);
-          }
+          t_temp.Second-=1;
+          if (t_temp.Second==255)
+            t_temp.Second=59;
+          myGLCD.printNumI(t_temp.Second, 218, 40, 2, '0');
           if (ct==false)
           {
             ct=true;
@@ -410,17 +319,9 @@ void setClock()
         if ((x>=122) && (x<=154))
         {
           buttonWait(122, 110);
-          t_temp.date+=1;
-          t_temp.date=validateDate(t_temp.date, t_temp.mon, t_temp.year);
-          if (t_temp.date<10)
-          {
-            myGLCD.printNumI(0, 122, 140);
-            myGLCD.printNumI(t_temp.date, 138, 140);
-          }
-          else
-          {
-            myGLCD.printNumI(t_temp.date, 122, 140);
-          }
+          t_temp.Day+=1;
+          t_temp.Day=validateDate(t_temp.Day, t_temp.Month, t_temp.Year+1970);
+          myGLCD.printNumI(t_temp.Day, 122, 140, 2, '0');
           if (cd==false)
           {
             cd=true;
@@ -434,19 +335,11 @@ void setClock()
         else if ((x>=170) && (x<=202))
         {
           buttonWait(170, 110);
-          t_temp.mon+=1;
-          if (t_temp.mon==13)
-            t_temp.mon=1;
-          if (t_temp.mon<10)
-          {
-            myGLCD.printNumI(0, 170, 140);
-            myGLCD.printNumI(t_temp.mon, 186, 140);
-          }
-          else
-          {
-            myGLCD.printNumI(t_temp.mon, 170, 140);
-          }
-          t_temp.date=validateDateForMonth(t_temp.date, t_temp.mon, t_temp.year);
+          t_temp.Month+=1;
+          if (t_temp.Month==13)
+            t_temp.Month=1;
+          myGLCD.printNumI(t_temp.Month, 170, 140, 2, '0');
+          t_temp.Day=validateDateForMonth(t_temp.Day, t_temp.Month, t_temp.Year+1970);
           if (cd==false)
           {
             cd=true;
@@ -460,11 +353,11 @@ void setClock()
         else if ((x>=218) && (x<=250))
         {
           buttonWait(234, 110);
-          t_temp.year+=1;
-          if (t_temp.year==2100)
-            t_temp.year=2000;
-          myGLCD.printNumI(t_temp.year, 218, 140);
-          t_temp.date=validateDateForMonth(t_temp.date, t_temp.mon, t_temp.year);
+          t_temp.Year+=1;
+          if (t_temp.Year==130)
+            t_temp.Year=30;
+          myGLCD.printNumI(t_temp.Year+1970, 218, 140);
+          t_temp.Day=validateDateForMonth(t_temp.Day, t_temp.Month, t_temp.Year+1970);
           if (cd==false)
           {
             cd=true;
@@ -475,25 +368,17 @@ void setClock()
             myGLCD.setFont(franklingothic_normal);
           }
         }
-        t_temp.dow=calcDOW(t_temp.date, t_temp.mon, t_temp.year);
-        showDOW(t_temp.dow);
+        t_temp.Wday=calcDOW(t_temp.Day, t_temp.Month, t_temp.Year+1970);
+        showDOW(t_temp.Wday);
       }
       else if ((y>=161) && (y<=186)) // Buttons: Date DOWN
       {
         if ((x>=122) && (x<=154))
         {
           buttonWait(122, 161);
-          t_temp.date-=1;
-          t_temp.date=validateDate(t_temp.date, t_temp.mon, t_temp.year);
-          if (t_temp.date<10)
-          {
-            myGLCD.printNumI(0, 122, 140);
-            myGLCD.printNumI(t_temp.date, 138, 140);
-          }
-          else
-          {
-            myGLCD.printNumI(t_temp.date, 122, 140);
-          }
+          t_temp.Day-=1;
+          t_temp.Day=validateDate(t_temp.Day, t_temp.Month, t_temp.Year+1970);
+          myGLCD.printNumI(t_temp.Day, 122, 140, 2, '0');
           if (cd==false)
           {
             cd=true;
@@ -507,19 +392,11 @@ void setClock()
         else if ((x>=170) && (x<=202))
         {
           buttonWait(170, 161);
-          t_temp.mon-=1;
-          if (t_temp.mon==0)
-            t_temp.mon=12;
-          if (t_temp.mon<10)
-          {
-            myGLCD.printNumI(0, 170, 140);
-            myGLCD.printNumI(t_temp.mon, 186, 140);
-          }
-          else
-          {
-            myGLCD.printNumI(t_temp.mon, 170, 140);
-          }
-          t_temp.date=validateDateForMonth(t_temp.date, t_temp.mon, t_temp.year);
+          t_temp.Month-=1;
+          if (t_temp.Month==0)
+            t_temp.Month=12;
+          myGLCD.printNumI(t_temp.Month, 170, 140, 2, '0');
+          t_temp.Day=validateDateForMonth(t_temp.Day, t_temp.Month, t_temp.Year+1970);
           if (cd==false)
           {
             cd=true;
@@ -533,11 +410,11 @@ void setClock()
         else if ((x>=218) && (x<=250))
         {
           buttonWait(234, 161);
-          t_temp.year-=1;
-          if (t_temp.year==1999)
-            t_temp.year=2099;
-          myGLCD.printNumI(t_temp.year, 218, 140);
-          t_temp.date=validateDateForMonth(t_temp.date, t_temp.mon, t_temp.year);
+          t_temp.Year-=1;
+          if (t_temp.Year==29)
+            t_temp.Year=129;
+          myGLCD.printNumI(t_temp.Year+1970, 218, 140);
+          t_temp.Day=validateDateForMonth(t_temp.Day, t_temp.Month, t_temp.Year+1970);
           if (cd==false)
           {
             cd=true;
@@ -548,8 +425,8 @@ void setClock()
             myGLCD.setFont(franklingothic_normal);
           }
         }
-        t_temp.dow=calcDOW(t_temp.date, t_temp.mon, t_temp.year);
-        showDOW(t_temp.dow);
+        t_temp.Wday=calcDOW(t_temp.Day, t_temp.Month, t_temp.Year+1970);
+        showDOW(t_temp.Wday);
       }
       else if ((y>=200) && (y<=239)) // Buttons: CANCEL / SAVE
       {
@@ -568,21 +445,20 @@ void setClock()
       }
     }
   }
+  if(schermata == 5) {
+    waitForTouchRelease();
   
-  waitForTouchRelease();
-
-  if (res==1)
-  {
-    if (ct)
-      rtc.setTime(t_temp.hour, t_temp.min, t_temp.sec);
-    if (cd)
+    if (res==1)
     {
-      rtc.setDate(t_temp.date, t_temp.mon, t_temp.year);
-      rtc.setDOW(t_temp.dow);
+      if (ct || cd) {
+        time_t tmp_time = makeTime(t_temp);
+        setTime(tmp_time);
+        RTC.set(tmp_time);
+      }
     }
+    
+    printMain();
   }
-  
-  printMain();
 }
 
 void waitForTouchRelease()

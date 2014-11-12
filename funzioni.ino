@@ -1,136 +1,86 @@
-static void my_callback (byte status, word offset, word len) {
-  Serial.println("response");
-  Serial.println( (char *) Ethernet::buffer + offset);
-  Serial.println();
-  int indice=0;
-  uint8_t flag = 0;
-  while(indice < len){
-    if(buffer[indice++]!='"')
-      flag=1;
-  }
-  if(flag==1){
-    String risposta;
-    risposta += buffer[indice];
-    risposta += buffer[indice+1];
-    if(risposta.equals("ok")) {
-      Serial.println("parametri inviati");
-    }
-    else if(buffer[indice]=='e'){
-      Serial.println("errore invio");
-    }
-  }
-  else {
-     Serial.println("sito inaccessibile");
-     inizializeEth();
-  }
-}
+struct payload_Meteo
+{
+  time_t time;
+  float inTemp;
+  float inHum;
+  float outTemp;
+  float outHum;
+  float outPress;
+};
 
-void regolaOraFromNtp() {
-  unsigned long timeFromNtp = getNtpTime();
-  if(timeFromNtp != 0) {
-    setTime(timeFromNtp);
-    rtc.setTime(hour(),minute(),second());
-    rtc.setTime(day(),month(),year());
-  }
-}
-unsigned long getNtpTime() {  
- if(Ethernet::isLinkUp()) { 
-  unsigned long timeFromNTP;   
-  const unsigned long seventy_years = 2208988800UL;      
- 
-  ether.ntpRequest(ntpServer, ntpMyPort);   
-  while(true) {       
-    word length = ether.packetReceive();       
-    ether.packetLoop(length);       
-    if(length > 0 && ether.ntpProcessAnswer(&timeFromNTP, ntpMyPort)) {
-      Serial.print("Time from NTP: ");
-      Serial.println(timeFromNTP);
-      return UK.toLocal(timeFromNTP - seventy_years);
-    }
-  }
-  return 0;
- }
-}
 
-static uint8_t inizializeEth() {
-  printCenterMessage("Inizializz. Rete");
-  Serial.print("Verifica Enc28j60 ... ");
-  if ( ether.begin( sizeof Ethernet::buffer, mac, ENC28J60_CS) ) 
-    Serial.println("\tsuccess");
-  else {
-    Serial.println("\tfailed");
-    return 0;
-  }
-  Serial.print("Setting IP ... ");
-  if ( ether.dhcpSetup() ) {
-    Serial.println("\t\tsuccess");
-  } 
-  else {
-    Serial.println("\t\tfailed");
-    return 0;
-//    if ( ether.staticSetup(ip,gw,dns,mask) ) 
-//      Serial.println("\t\tsuccess");
-//    else {
-//      Serial.println("\t\tfailed");
-//      
-//   }
-  }
-  ether.printIp("Allocated IP: ", ether.myip);
-  ether.printIp("Gateway IP  : ", ether.gwip);  
-  ether.printIp("DNS IP      : ", ether.dnsip); 
-  Serial.print("Verifica sito web ... ");
-  if ( ether.dnsLookup( website ) ) 
-    Serial.println("\tsuccess");
-  else {
-    Serial.println("\tfailed");
-    return 0;
-  }
-  Serial.println();
-  return 1;
-}
+struct payload_Sensor_1
+{
+  float temp;
+  float hum;
+  float pres;
+  float tempOfBmp;
+  int battery_level; 
+};
 
+//
+//void regolaOraFromNtp() {
+//  unsigned long timeFromNtp = getNtpTime();
+//  if(timeFromNtp != 0) {
+//    setTime(timeFromNtp);
+//    rtc.setTime(hour(),minute(),second());
+//    rtc.setTime(day(),month(),year());
+//  }
+//}
+//unsigned long getNtpTime() {  
+// if(Ethernet::isLinkUp()) { 
+//  unsigned long timeFromNTP;   
+//  const unsigned long seventy_years = 2208988800UL;      
+// 
+//  ether.ntpRequest(ntpServer, ntpMyPort);   
+//  while(true) {       
+//    word length = ether.packetReceive();       
+//    ether.packetLoop(length);       
+//    if(length > 0 && ether.ntpProcessAnswer(&timeFromNTP, ntpMyPort)) {
+//      Serial.print("Time from NTP: ");
+//      Serial.println(timeFromNTP);
+//      return UK.toLocal(timeFromNTP - seventy_years);
+//    }
+//  }
+//  return 0;
+// }
+//}
+//
 
 void invioDati() {
-    while(flag==false) {
-      //touchInterface();
-      if (millis()/1000 > time_last){
-        if ( (time_last = millis()/1000) % interval == 0 ){
-          flag = true;
-          char s_temperature[5]; // 5 caratteri (5 char) perché il nostro numero decimale (float) è 
-                                 // formato da: [ un intero a due cifre, un punto, un decimale, ed in fine si aggiungerà il 
-                                 // terminatore di stringa (cioè \0) ]
-          dtostrf(currTemp, 4, 1, s_temperature);
-          
-          char s_humidity[5]; // 5 caratteri (5 char) perché il nostro numero decimale (float) è formato da: [ un intero 
-                              // a due cifre, un punto, un decimale, ed in fine si aggiungerà il terminatore di stringa (cioè \0) ]
-          dtostrf(currHum, 4, 1, s_humidity);
-          
-          char s_pressure[7]; // 5 caratteri (5 char) perché il nostro numero decimale (float) è formato da: [ un intero 
-                              // a due cifre, un punto, un decimale, ed in fine si aggiungerà il terminatore di stringa (cioè \0) ]
-          dtostrf(currPress, 6, 1, s_pressure);
-          sprintf(buffer, "temp=%s&hum=%s&press=%s", s_temperature, s_humidity, s_pressure);
-          ether.browseUrl(PSTR("/arduino.php?"), buffer, website, my_callback);
-          Serial.println(buffer);
-          ether.packetLoop(ether.packetReceive());
-        }
-      }
-    }
-    flag=false;
+  detachInterrupt(5);
+  errorNetConnection = 0;  
+  Serial.print("Sending...");
+  //t=rtc.getTime();
+  payload_Meteo payload = { now(), currInTemp, currInHum, currTemp, currHum, currPress};
+  Serial.print(payload.outPress,2);
+  RF24NetworkHeader header(/*to node*/ MASTER_ADDRESS);
+  errorNetConnection = !network.write(header,&payload,sizeof(payload));
+  attachInterrupt(5, buttonPressed, RISING);
+  if(errorNetConnection)
+  Serial.println("Errore Network");
 }
+
 
 /* descrizione: funzione per aggiornamento dei valori interni letti dai sensori 
  *              ed esterni se presenti nel buffer wifi.
  */
 void aggiornaDati() {
+  
   Serial.println("func. aggiorno dati");
-  while (nrf24.available()) 
+  while (network.available()) 
   {
     recuperaDati();
   }
-    touchInterface();
-    recuperaDatiInterni();
-//    if(lcdActive & schermata==3) 
-//      printMeteoAttuale();
+  touchInterface();
+  recuperaDatiInterni();
+  if(lcdActive) {
+    if(schermata==3) 
+      printMeteoAttuale();
+    else if(schermata==1);
+      printMain();
+  }
+  invioDati();
 }
 
 /* descrizione: funzione per il calcolo delle previsioni;
@@ -327,99 +277,28 @@ void checkDataOra() {
  */
 void recuperaDati() {
   Serial.println("aggiorno dati esterni");
-  char* bufferWifi;
-  uint8_t error = 0;
-  // Should be a message for us now   
-  uint8_t buf[RH_NRF24_MAX_MESSAGE_LEN];
-  uint8_t len = sizeof(buf);
-  if (nrf24.recv(buf, &len)) {
-    bufferWifi=(char*)buf;
-    Serial.println(bufferWifi);
-    currPress=sealevel(getPressione(bufferWifi),altitudine);
-    currTemp=getTemp(bufferWifi);
-    currHum= getHum(bufferWifi);
-    if((currTemp==0) || (currHum == 0)) {
-      Serial.println("errore comunicazione");
-      printCenterMessage("Errore comunicazione");
-      error = 1;
-    }
-  nrf24.setModeIdle();   //Moallità risparmio energetico wifi
-  }
-  if(error)
-    return;
-  //rendo reattiva la grafica
-  touchInterface();
-  if(!lcdActive);
-    t = rtc.getTime();
-  printSerialTime(t);
-  printSerialTime(oldDataSaved);
-  if(((oldDataSaved.hour==23) && (t.hour==0))){
+  if (network.available()) {
+    detachInterrupt(5);
+    RF24NetworkHeader header;
+    payload_Sensor_1 payload;
+    network.read(header,&payload,sizeof(payload));
+    currPress=sealevel(payload.pres,altitudine);
+    currTemp=payload.temp;
+    currHum= payload.hum;
+    attachInterrupt(5, buttonPressed, RISING);
+    //rendo reattiva la grafica
+    touchInterface();
+    //if(!lcdActive);
+      //t = rtc.getTime();
+    //printSerialTime(t);
+    //printSerialTime(oldDataSaved);
+    if(oldDataSaved <= now()-3600){
       storeData();
-      oldDataSaved=t;
-  }
-  else if ((oldDataSaved.hour==t.hour-1)) 
-    {
-      storeData();
-      oldDataSaved=t;
+      oldDataSaved=now();
     }
-  invioDati();
-}
-
-/* descrizione: funzione recupera la pressione dal buffer wifi e ne ritorna il valore float;
- * param[in] buff: puntatore al buffer wifi.
- */
-float getPressione(char* buff) 
-{
-  if(buff[0]=='p' && buff[1]>='0' && buff[1]<='9') 
-  {
-    char pr[7];
-    for(uint8_t i=0;i<7;i++) {
-      pr[i]=buff[i+1];
-    }
-    pr[6]='\0';
-    return atof(pr);
-  }
-  else 
-    return 0.0;
-}
-
-/* descrizione: funzione recupera la temperatura dal buffer wifi salvandola sottoforma 
- *              di stringa nella variabile globale "currStrTemp" e ne ritorna il valore float;
- * param[in] buff: puntatore al buffer wifi.
- */
-float getTemp(char* buff) 
-{
-  if(buff[14]=='t' && buff[15]>='0' && buff[15]<='9') 
-  {
-    for(uint8_t i=15;i<19;i++)
-      currStrTemp[i-15]=buff[i];
-    currStrTemp[4]='\0';
-    return atof(currStrTemp);
-  }
-  else {
-    currStrTemp= "--.-";
-    return 0.0;
   }
 }
 
-/* descrizione: funzione recupera l'umidità dal buffer wifi salvandola sottoforma 
- *              di stringa nella variabile globale "currStrHum" e ne ritorna il valore float;
- * param[in] buff: puntatore al buffer wifi.
- */
-float getHum(char* buff) 
-{
-  if(buff[8]=='u'&& buff[9]>='0' && buff[9]<='9') 
-  {
-    for(uint8_t i=9;i<11;i++)
-      currStrHum[i-9]=buff[i];
-    currStrHum[2]='\0';
-    return atof(currStrHum);
-  }
-  else {
-    currStrHum = "--";
-    return 0.0;
-  }
-}
 
 /* descrizione: funzione che, data una pressione P (mb) misurata a una speifica 
  *              altitudine A (meters), ritorna la pressione al livello del mare;
@@ -565,26 +444,26 @@ int readAltitude() {
  */
 void backlightOn() 
 {
-  digitalWrite(backlightPin,LOW); 
+  digitalWrite(BACKLIGHT_PIN,LOW); 
 }
 
 /* descrizione: funzione che spegne la retroilluminazione dello schermo.
  */
 void backlightOff() 
 {
-  digitalWrite(backlightPin,HIGH);
+  digitalWrite(BACKLIGHT_PIN,HIGH);
 }
 
 /* descrizione: funzione che stampa su porta seriale l'ora indicata;
  * param[in] Time x: valore dell'orario da stampare.
  */
-void printSerialTime(const Time& x){
-  Serial.print('\n');
-  Serial.print(x.hour);
-  Serial.print(x.min);
-  Serial.print(x.sec);
-  Serial.print(":");
-}
+//void printSerialTime(const Time& x){
+//  Serial.print('\n');
+//  Serial.print(x.hour);
+//  Serial.print(x.min);
+//  Serial.print(x.sec);
+//  Serial.print(":");
+//}
 
 /* descrizione: funzione che arrotorna il numero float indicato in intero e lo ritorna;
  * param[in] float num: valore da arrotondare.
@@ -600,26 +479,26 @@ int nextInt(float num) {
  *              nell'array globale "timeArray" utilizzando la variabile globale "t" (ora attuale).
  */
 void calcolaOrariSole() {
-  if(!lcdActive);
-    t = rtc.getTime();
+  //if(!lcdActive);
+    //t = rtc.getTime();
   // The date on which you want to calculate astronomical events
-  uint8_t day = t.date;
-  uint8_t month = t.mon;
-  int millennio = ((int)(t.year/100))*100;
-  uint16_t year = t.year-millennio;
+  int millennio = ((int)(year()/100))*100;
+  uint16_t anno = year()-millennio;
   
   // This functions are used to set your geographical coordinates of your location
   mySun.setPosition(myLatitude, myLongitude);
   
   // This is the function that allows you to calculate sunrise and sunset
-  boolean check = mySun.computeSR(timeArray, twilight_minutes, day, month, year);
+  boolean check = mySun.computeSR(timeArray, twilight_minutes, day(), month(), anno);
   //return true if all the data entered are correct
   
   if( !check == true )
     // Some parameter is incorrect and the function can not perform the calculation
     Serial.println("Something wrong in function computeSR...please check your input parameters");
-  timeArray[SUNSET_H]++;
-  timeArray[SUNRISE_H]++;
+  if(UK.locIsDST(now())) {
+    timeArray[SUNSET_H]++;
+    timeArray[SUNRISE_H]++;
+  }
 }
 
 char *verboseError(byte err)
@@ -716,30 +595,23 @@ void printTime(byte h, byte m)
 }
 
 boolean isDayTime() {
-  Serial.println("isDaytime");
-  Time sunset;
-  Time sunrise;
-  sunset.hour = timeArray[SUNSET_H];
-  sunset.min = timeArray[SUNSET_M];
-  sunset.sec = 0;
-  sunrise.hour = timeArray[SUNRISE_H];
-  sunrise.min = timeArray[SUNSET_M];
-  sunrise.sec = 0;
-  
-  if( (getTime(t) < getTime(sunset)) && (getTime(t) > getTime(sunrise)) )
+  if(hour() < timeArray[SUNSET_H]) {
+    if (minute() < timeArray[SUNSET_M])
       return true;
+    else
+      return false;
+  }
+  else if(hour() > timeArray[SUNRISE_H]) {
+    if(minute() > timeArray[SUNRISE_M])
+      return true;
+    else
+      return false; 
+  } 
   else
-      return false;  
+    return false;
       
   //Serial.println(now());
   //Serial.println(getTime(sunset));
   //Serial.println(getTime(sunrise));
 }
 
-unsigned long getTime(const Time& _time) {
-    unsigned long secondi; 
-    secondi = ((unsigned long)_time.hour) * 3600;
-    secondi += ((unsigned long)_time.min) * 60;
-    secondi += _time.sec;
-    return secondi;
-}
