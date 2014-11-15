@@ -52,7 +52,8 @@ void invioDati() {
   errorNetConnection = 0;  
   Serial.print("Sending...");
   //t=rtc.getTime();
-  payload_Meteo payload = { now(), currInTemp, currInHum, currTemp, currHum, currPress};
+  payload_Meteo payload = { now(), (isnan(currInTemp))?0:currInTemp, (isnan(currInHum))?0:currInHum, 
+                                (isnan(currTemp))?0:currTemp, (isnan(currHum))?0:currHum, (isnan(currPress))?0:currPress};
   Serial.print(payload.outPress,2);
   RF24NetworkHeader header(/*to node*/ MASTER_ADDRESS);
   errorNetConnection = !network.write(header,&payload,sizeof(payload));
@@ -68,16 +69,13 @@ void invioDati() {
 void aggiornaDati() {
   
   Serial.println("func. aggiorno dati");
-  while (network.available()) 
-  {
-    recuperaDati();
-  }
-  touchInterface();
-  recuperaDatiInterni();
+  recuperaDati();
   if(lcdActive) {
-    if(schermata==3) 
-      printMeteoAttuale();
-    else if(schermata==1);
+    touchInterface();
+  }
+  recuperaDatiInterni();
+  if(lcdActive) { 
+    if(schermata==1)
       printMain();
   }
   invioDati();
@@ -283,7 +281,10 @@ void recuperaDati() {
     payload_Sensor_1 payload;
     network.read(header,&payload,sizeof(payload));
     currPress=sealevel(payload.pres,altitudine);
-    currTemp=payload.temp;
+    if(isnan(currTemp))
+      currTemp=payload.tempOfBmp;
+    else
+      currTemp=payload.temp;
     currHum= payload.hum;
     attachInterrupt(5, buttonPressed, RISING);
     //rendo reattiva la grafica
@@ -412,26 +413,6 @@ void saveAltitude(int alt) {
   altitudine=alt;
 }
 
-//void savePressure(int ora) {
-//  int pressione = storico.getPress(ora);
-//  if(ora<0&ora>-25){
-//    int indirizzo=2-ora;
-//    int miglCent = (int)(pressione/100);
-//    EEPROM.write(indirizzo, miglCent);
-//    EEPROM.write(indirizzo+25, (pressione-(miglCent*100)));
-//  }
-//}
-//
-//int readPressure(int ora) {
-//  if(ora<0&ora>-25){
-//    int indirizzo=2-ora;
-//    int miglCent = (int)(pressione/100);
-//    int p = EEPROM.write(indirizzo)*100;
-//    p += EEPROM.write(indirizzo+25);
-//    return p; 
-//  }
-//}
-
 /* descrizione: funzione che legge e ritorna il valore dell'altitudine salvato sul'EEPROM.
  */
 int readAltitude() {
@@ -479,17 +460,15 @@ int nextInt(float num) {
  *              nell'array globale "timeArray" utilizzando la variabile globale "t" (ora attuale).
  */
 void calcolaOrariSole() {
-  //if(!lcdActive);
-    //t = rtc.getTime();
   // The date on which you want to calculate astronomical events
   int millennio = ((int)(year()/100))*100;
   uint16_t anno = year()-millennio;
   
   // This functions are used to set your geographical coordinates of your location
-  mySun.setPosition(myLatitude, myLongitude);
+  mySun.setPosition(MY_LATITUDE, MY_LONGITUDE);
   
   // This is the function that allows you to calculate sunrise and sunset
-  boolean check = mySun.computeSR(timeArray, twilight_minutes, day(), month(), anno);
+  boolean check = mySun.computeSR(timeArray, TWILIGHT_MINUTES, day(), month(), anno);
   //return true if all the data entered are correct
   
   if( !check == true )
@@ -609,9 +588,5 @@ boolean isDayTime() {
   } 
   else
     return false;
-      
-  //Serial.println(now());
-  //Serial.println(getTime(sunset));
-  //Serial.println(getTime(sunrise));
 }
 

@@ -41,13 +41,38 @@
 #include <UTFT_tinyFAT.h>
 #include <SunLight.h>
 
+//VARIABILI
+//indirizzi rete
+#define MY_ADDRESS 01
+#define MASTER_ADDRESS 00
+
+//set pin numbers:
+#define BUTTON_PIN 18     // the number of the pushbutton pin /Interrupt 5
+#define BACKLIGHT_PIN 9   // number of backlight tft pin
+#define WAKE_WIFI_PIN 19   // intrrupt from wifi - Interrupt 4    
+
+//tempo di ritorno alla home e poi di spegniento dello schermo 
+#define STANBY_CYCLE 90000
+
+// posizione per il calcolo delle ore solari
+// Setting the longitude of your location
+// Will be used to estimate the average Noon
+#define MY_LONGITUDE 11.80
+// Setting the latitude of your location
+#defibe MY_LATITUDE 45.39
+// If you want to anticipate the sunrise and postpone the sunset.
+// Permits data beetween 0 and 60 and the unit of measurement is minutes
+#define TWILIGHT_MINUTES 10
+
+uint8_t storicoToSd = 0;          // 1 se l'arduino deve salvare lo storico su sd, 0 altrimenti
+//FINE VARIABILI  
+
 
 //Fonts
 extern uint8_t BigFont[];
 extern uint8_t SmallFont[];
 extern uint8_t DotMatrix_M_Slash[];
 extern uint8_t franklingothic_normal[];
-
 //Image Files
 extern prog_uint16_t settings[0x384];
 extern prog_uint16_t arrow[0x384];
@@ -62,19 +87,6 @@ char* images[]={
  MET5.RAW --- pioggia debole notte
  */
 
-extern 
-//VARIABILI
-
-#define MY_ADDRESS 01
-#define MASTER_ADDRESS 00
-
-//set pin numbers:
-#define BUTTON_PIN 18     // the number of the pushbutton pin /Interrupt 5
-#define BACKLIGHT_PIN 9   // number of backlight tft pin
-#define WAKE_WIFI_PIN 19   // intrrupt from wifi - Interrupt 4    
-
-uint8_t storicoToSd = 0;          // 1 se l'arduino deve salvare lo storico su sd, 0 altrimenti
-
 // TimeZone : United Kingdom (London, Belfast)
 TimeChangeRule BST = {
   "BST", Last, Sun, Mar, 3, 120};        //British Summer Time
@@ -82,9 +94,9 @@ TimeChangeRule GMT = {
   "GMT", Last, Sun, Oct, 3, 60};         //Standard Time
 Timezone UK(BST, GMT);
 
-int wakeCount =0;
-int cycleNum;
-#define STANBY_SEC 150
+//int wakeCount =0;
+//int cycleNum;
+//#define STANBY_SEC 150
 
 //Indirizzi EEPROM
 //0,1 altitudine  
@@ -96,7 +108,7 @@ volatile uint8_t wakeStatus = 0;  // variable to store a request for wakeUp
 //parametri interfaccia
 boolean buttonState = false;  //stato del pulsante true = premuto
 boolean lcdActive = true;     //diventa false dopo un minuto di inattività
-int inattivita = 0;           //tempo di inattività
+unsigned long inattivita = 0;           //tempo di inattività
 uint8_t schermata = 0;            /*! 1 - Situazione Attuale
  *  2 - Grafico pressione
  *  3 - Schermata esterno
@@ -114,15 +126,15 @@ float secAggWifi = 0.0;       //secondi dall'ultimo aggiornamento dei dati meteo
 boolean firstConnection=true; //prima connessione con stazione esterna
 boolean errorConnection=false; //errore nella connessione della stazione esterna
 double altitudine;
-float currPress= 0.0;          //pressione corrente letta dai sensori esterni  
-float currHum = 0.0;          //umidita corrente letta dai sensori esterni 
-float currTemp = 0.0;         //temperatura corrente letta dai sensori esterni 
+float currPress= NAN;          //pressione corrente letta dai sensori esterni  
+float currHum = NAN;          //umidita corrente letta dai sensori esterni 
+float currTemp = NAN;         //temperatura corrente letta dai sensori esterni 
 
 StoricoDati storico; //Storico dati
 
 //dati meteo interni
-float currInHum=0.0;          //umidita corrente letta dal sensore interno 
-float currInTemp=0.0;         //temperatura corrente letta dal sensoro interno 
+float currInHum=NAN;          //umidita corrente letta dal sensore interno 
+float currInTemp=NAN;         //temperatura corrente letta dal sensoro interno 
 
 //Variabili SD
 uint8_t sdAviable = 0;            //sd disponibile
@@ -147,16 +159,7 @@ DHT dht;                                //Sensore Temperatura
 UTFT_tinyFAT myFiles(&myGLCD);
 
 SunLight mySun; // Declaration of the object
-// Setting the longitude of your location
-// Will be used to estimate the average Noon
-float myLongitude = 11.80; //selvazzano 
 
-// Setting the latitude of your location
-float myLatitude = 45.39;
-
-// If you want to anticipate the sunrise and postpone the sunset.
-// Permits data beetween 0 and 60 and the unit of measurement is minutes
-uint8_t twilight_minutes = 10;
 // The array where will be saved variables of sunrise and sunset
 // with the following form:
 // timeArray[ Rise_hours, Rise_minutes, Set_hours, Set_minutes ]
@@ -183,8 +186,8 @@ void setup()
   pinMode(BUTTON_PIN, INPUT);       // initialize the pushbutton pin as an input 
   pinMode(WAKE_WIFI_PIN, INPUT_PULLUP);
 
-  cycleNum = (int)(STANBY_SEC/8-STANBY_SEC/95);
-  wakeCount=0;
+  //cycleNum = (int)(STANBY_SEC/8-STANBY_SEC/95);
+  //wakeCount=0;
 
   //Setup the LCD
   myGLCD.InitLCD();
@@ -238,8 +241,8 @@ void setup()
   // wakeUpNow when pin 4 goes from low to high
   
   //paint schermata iniziale
+  recuperaDatiInterni();
   printMain();
-  aggiornaDati();
   Serial.print("Setup eseguito in :");
   Serial.print(millis()/1000);
   Serial.println("s");
@@ -258,39 +261,29 @@ void loop()
     }
     if(lcdActive) {
       if(network.available()) {
-        //dataAviable=false;
         aggiornaDati();
       }
       checkDataOra();
       touchInterface();         //eseguo interfaccia touch
       flashPrevision();
-      if(inattivita==5000&schermata!=1)    //dopo 3000 di inattivita se sono su una schermata diversa dalla principale
+      if((inattivita == STANBY_CYCLE) & (schermata!=1) )    //dopo 3000 di inattivita se sono su una schermata diversa dalla principale
         printMain();
-      else if(inattivita==8000)              //dopo 5000 di inattivita
+      else if(inattivita == STANBY_CYCLE*2)              //dopo 5000 di inattivita
       {
         backlightOff();                    //spengo retroilluminazione 
         myGLCD.lcdOff();                   //metto in stand-By lo schermo
         lcdActive=false;
         sleepNow();
       }
-      delay(10);
+      //delay(10);
     }
     else {
-      if(wakeCount==(cycleNum-1)) {
         if(network.available()) {
           //Serial.println("Dati disp");
-          wakeCount=0;
+          //wakeCount=0;
           aggiornaDati();
-          sleepNow();
         }
-      }
-      else {
-        //Serial.print("No Dati disp: ");
-        //Serial.println(wakeCount);
-        //delay(100);
-        wakeCount++;
         sleepNow();
-      }
     }
   }
 }

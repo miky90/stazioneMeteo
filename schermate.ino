@@ -36,27 +36,31 @@ void printMain() {
   myGLCD.print("IN",38,52);
   myGLCD.setFont(DotMatrix_M_Slash);
   myGLCD.print("`",88,84);
-  myGLCD.printNumF(currInTemp,1,8,84,'.',5);
+  if(isnan(currInTemp))
+    myGLCD.print("---.-",8,84);
+  else
+    myGLCD.printNumF(currInTemp,1,8,84,'.',5);
   myGLCD.setFont(franklingothic_normal);
   myGLCD.print("%",73,117);
-  myGLCD.printNumI(nextInt(currInHum),25,117,3);
+  if(isnan(currInHum))
+    myGLCD.print("---",25,117);
+  else
+    myGLCD.printNumI(nextInt(currInHum),25,117,3);
 
   //OUT
   myGLCD.print("OUT",131,52);
   myGLCD.setFont(DotMatrix_M_Slash);
   myGLCD.print("`",190,84);
-  if(currPress==0) {
+  if(isnan(currTemp))
     myGLCD.print("---.-",110,84);
-    myGLCD.setFont(franklingothic_normal);
-    myGLCD.print("%",170,117);
-    myGLCD.print("---",122,117);
-  }
-  else {
+  else
     myGLCD.printNumF(currTemp,1,110,84,'.',5);
-    myGLCD.setFont(franklingothic_normal);
-    myGLCD.print("%",170,117);
+  myGLCD.setFont(franklingothic_normal);
+  myGLCD.print("%",170,117);
+  if(isnan(currHum))
+    myGLCD.print("---",122,117);
+  else
     myGLCD.printNumI(nextInt(currHum),122,117,3);
-  }
 
   //icona indietro
   //myGLCD.drawBitmap(15,184,30,30,arrow);
@@ -65,11 +69,11 @@ void printMain() {
 
   //pressione
   myGLCD.setFont(franklingothic_normal);
-  myGLCD.print("hPa",166,192);
-  if(currPress==0)
-    myGLCD.print("----.-",70,192);
+  myGLCD.print("hPa",134,192);
+  if(isnan(currPress))
+    myGLCD.print("----",70,192);
   else
-    myGLCD.printNumF(currPress,1,70,192);
+    myGLCD.printNumI(nextInt(currPress),70,192);
 
   //alba
   myGLCD.setFont(SmallFont);
@@ -248,7 +252,7 @@ void printSituazioneEsterna() {
   printDataOra(true);
 
   //DATI 
-  //8 riga - pressione
+  //8 riga - pressione (-1)
   myGLCD.setFont(SmallFont);
   myGLCD.setColor(0, 0, 0); //Bianco
   myGLCD.setBackColor(255,255,255);
@@ -258,22 +262,37 @@ void printSituazioneEsterna() {
   else
     myGLCD.print("----.-", 28, 141);
 
-  //previson +1
+  //8riga - pressione (ora)
+  if(isnan(currPress))
+    myGLCD.print("----.-",128,141);
+  else
+    myGLCD.printNumF(currPress,1,128,141);
+  myGLCD.print("hPa",176,141);
+
+  //previson (+1)
   myGLCD.print("hPa    ", 278, 141);
   if(pressione[2]==0)
     myGLCD.print("----.-", 230, 141);
   else
     myGLCD.printNumF(pressione[2], 1, 230, 141,'.',6);
 
-  //9riga - umidità
+  //9riga - gradi (-1)
   myGLCD.setFont(franklingothic_normal);
-  myGLCD.setColor(0, 0, 0);
-  myGLCD.print("%", 80, 161);
-  if(umidita[0]!=0)
-    myGLCD.printNumI(umidita[0],32,161,3);
+  myGLCD.setColor(0, 0, 0); //Bianco
+  myGLCD.setBackColor(255, 255, 255);
+  myGLCD.print("`", 90, 161);
+  if(gradi[0]!=0){
+    myGLCD.printNumF(gradi[0],1,16 , 161,'.',5); 
+  }
   else
-    myGLCD.print("---",32,161);
-
+    myGLCD.print("---.-",16 , 161);
+  
+   //9 riga gradi (ora)
+  myGLCD.print("`",188,161);
+  if(isnan(currTemp))
+    myGLCD.print("---.-",112,161);
+  else 
+    myGLCD.printNumF(currTemp,1,112,161,'.',5);
 
   // previsione +2h
   myGLCD.setColor(255, 255, 255);
@@ -288,17 +307,22 @@ void printSituazioneEsterna() {
   else
     myGLCD.printNumF(pressione[3],1, 230, 183,'.',6);
 
-  //10riga - gradi
+  //10riga - umidita (-1)
   myGLCD.setFont(franklingothic_normal);
-  myGLCD.setColor(0, 0, 0); //Bianco
-  myGLCD.setBackColor(255, 255, 255);
-  myGLCD.print("`", 90, 181);
-  if(gradi[0]!=0){
-    //Serial.println(gradi[0]);
-    myGLCD.printNumF(gradi[0],1,16 , 181,'.',5); 
-  }
+  myGLCD.setColor(0, 0, 0);
+  myGLCD.print("%", 80, 181);
+  if(umidita[0]!=0)
+    myGLCD.printNumI(nextInt(umidita[0]),32,181,3);
   else
-    myGLCD.print("---.-",16 , 181); 
+    myGLCD.print("---",32,181);
+    
+  //10riga - umidita (ora)
+  myGLCD.print("%",176,181);
+  if(isnan(currHum))
+    myGLCD.print("---",128,181);
+  else
+    myGLCD.printNumI(nextInt(currHum),128,181,3);
+    
   //FINE DATI
 
   //stampo linee divisorie
@@ -321,39 +345,11 @@ void printSituazioneEsterna() {
 
   //immagini meteo
   printImageMeteo(0,pressione[0]);
-  //printImageMeteo(1,round(pressione[1]));
-  printMeteoAttuale();
+  printImageMeteo(1,currPress);
   printImageMeteo(2,pressione[2]);
 
   attachInterrupt(5, buttonPressed, RISING);
   //FINE DATI
-}
-
-void printMeteoAttuale() {
-  calcolaOrariSole();
-  //ora
-  myGLCD.setFont(SmallFont);
-  myGLCD.setBackColor(255,255,255);
-  myGLCD.setColor(0, 0, 0);
-  if(currPress==0)
-    myGLCD.print("----.-",128,141);
-  else
-    myGLCD.printNumF(currPress,1,128,141);
-  myGLCD.print("hPa",176,141);
-  myGLCD.setFont(franklingothic_normal);
-  myGLCD.setColor(0, 0, 0); //Bianco
-  myGLCD.setBackColor(255, 255, 255);
-  myGLCD.print("%",176,161);
-  myGLCD.print("`",188,181);
-  if(currPress==0) {
-    myGLCD.print("---",128,161);
-    myGLCD.print("---.-",112,181);
-  }
-  else {
-    myGLCD.printNumI(nextInt(currHum),128,161,3);
-    myGLCD.printNumF(currTemp,1,112,181,'.',5);
-  }
-  printImageMeteo(1,currPress);
 }
 
 //Schermata 5
@@ -480,30 +476,33 @@ void printImageMeteo(uint8_t colonna, float pressione) // '0' = -1h, '1' = ora, 
 { 
   word res;
   myGLCD.setFont(franklingothic_normal);
-  if(pressione!=0) 
+  if(!isnan(pressione) & pressione!=0) 
   {
     uint8_t index=0;
-    if(pressione>=1016)
+    if(pressione>=1016) // sole
     {
       if(isDayTime())
         index=0;
       else
         index=3;
     }
-    else if(pressione>=1009 & pressione<1016)
+    else if(pressione>=1009 & pressione<1016) //nuvoloso
     {
       if(isDayTime())
         index=1;
       else
         index=4;
     }
-    else if(pressione<1009) 
+    else if(pressione<1009)  //pioggia / neve
     {
-      Serial.print(currTemp);
-      if(currTemp>1.0)
+      if(isnan(currTemp))
         index = 2;
-      else
-        index = 5;
+      else {
+        if( (currTemp <= 1.0) && (currTemp >= -1.0) )
+          index = 5;
+        else
+          index = 2;
+      }
     }
     if( (sdAviable) && (file.exists(images[index])) ) {
       if(colonna==0) //-1h
@@ -599,15 +598,17 @@ void printTopBar(char* titolo) {
   myGLCD.setBackColor(255, 165, 0); //Arancione
   myGLCD.print(titolo, CENTER, 1);
   if(!sdAviable){
-    myGLCD.setColor(100, 100, 100); //Bianco
-    myGLCD.setBackColor(255, 95, 0); //Arancione
+    myGLCD.setColor(100, 100, 100); //grigio
+    myGLCD.setBackColor(255, 95, 0); //rosso
   }
   myGLCD.print("SD",RIGHT,1);
-  //  if(!Ethernet::isLinkUp()){
-  //    myGLCD.setColor(100, 100, 100); //Bianco
-  //    myGLCD.setBackColor(255, 95, 0); //Arancione
-  //  }
-  //  myGLCD.print("ETH",232,1);
+  myGLCD.setColor(255, 255, 255); //Bianco
+  myGLCD.setBackColor(255, 165, 0); //Arancione
+  if(errorNetConnection){
+    myGLCD.setColor(100, 100, 100); //Grigio
+    myGLCD.setBackColor(255, 95, 0); //Rosoo
+  }
+  myGLCD.print("NET",232,1);
 }
 
 void printPulsanti() {
