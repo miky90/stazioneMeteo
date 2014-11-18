@@ -52,14 +52,14 @@
 #define WAKE_WIFI_PIN 19   // intrrupt from wifi - Interrupt 4    
 
 //tempo di ritorno alla home e poi di spegniento dello schermo 
-#define STANBY_CYCLE 90000
+#define STANBY_SEC 10
 
 // posizione per il calcolo delle ore solari
 // Setting the longitude of your location
 // Will be used to estimate the average Noon
 #define MY_LONGITUDE 11.80
 // Setting the latitude of your location
-#defibe MY_LATITUDE 45.39
+#define MY_LATITUDE 45.39
 // If you want to anticipate the sunrise and postpone the sunset.
 // Permits data beetween 0 and 60 and the unit of measurement is minutes
 #define TWILIGHT_MINUTES 10
@@ -76,7 +76,7 @@ extern uint8_t franklingothic_normal[];
 //Image Files
 extern prog_uint16_t settings[0x384];
 extern prog_uint16_t arrow[0x384];
-char* images[]={
+static char* images[]={
   "MET0.RAW", "MET1.RAW", "MET2.RAW", "MET3.RAW", "MET4.RAW", "MET5.RAW" };
 /*
  MET0.RAW --- sereno         giorno
@@ -106,10 +106,11 @@ volatile uint8_t wakeStatus = 0;  // variable to store a request for wakeUp
 // 1 - wifi
 // 2 - button
 //parametri interfaccia
-boolean buttonState = false;  //stato del pulsante true = premuto
-boolean lcdActive = true;     //diventa false dopo un minuto di inattività
-unsigned long inattivita = 0;           //tempo di inattività
-uint8_t schermata = 0;            /*! 1 - Situazione Attuale
+static boolean buttonState = false;      //stato del pulsante true = premuto
+static boolean lcdActive = true;         //diventa false dopo un minuto di inattività
+//uint8_t inattivita = 0;           //tempo di inattività
+static unsigned long prevMSecInat = 0;   
+static uint8_t schermata = 0;            /*! 1 - Situazione Attuale
  *  2 - Grafico pressione
  *  3 - Schermata esterno
  *  4 - Impostazioni
@@ -117,33 +118,31 @@ uint8_t schermata = 0;            /*! 1 - Situazione Attuale
  */
 
 //variabili per far lampeggiare la colonna della previsione +1
-boolean flashBar = true;
-int maxScala = 1000;
-int mSecFlash = 0;
+static boolean flashBar = true;
+static int maxScala = 1000;
+static int mSecFlash = 0;
 
 //dati meteo esterni
-float secAggWifi = 0.0;       //secondi dall'ultimo aggiornamento dei dati meteo esterni
-boolean firstConnection=true; //prima connessione con stazione esterna
-boolean errorConnection=false; //errore nella connessione della stazione esterna
-double altitudine;
-float currPress= NAN;          //pressione corrente letta dai sensori esterni  
-float currHum = NAN;          //umidita corrente letta dai sensori esterni 
-float currTemp = NAN;         //temperatura corrente letta dai sensori esterni 
+static boolean firstConnection=true; //prima connessione con stazione esterna
+static boolean errorConnection=false; //errore nella connessione della stazione esterna
+static double altitudine;
+static float currPress= NAN;          //pressione corrente letta dai sensori esterni  
+static float currHum = NAN;          //umidita corrente letta dai sensori esterni 
+static float currTemp = NAN;         //temperatura corrente letta dai sensori esterni 
 
-StoricoDati storico; //Storico dati
+static StoricoDati storico; //Storico dati
 
 //dati meteo interni
-float currInHum=NAN;          //umidita corrente letta dal sensore interno 
-float currInTemp=NAN;         //temperatura corrente letta dal sensoro interno 
+static float currInHum=NAN;          //umidita corrente letta dal sensore interno 
+static float currInTemp=NAN;         //temperatura corrente letta dal sensoro interno 
 
 //Variabili SD
-uint8_t sdAviable = 0;            //sd disponibile
-uint8_t errorNetConnection = 0;      //errore connessione mosulo rete
+static uint8_t sdAviable = 0;            //sd disponibile
+static uint8_t errorNetConnection = 0;      //errore connessione mosulo rete
 
 // Variabili orologio
-boolean puntini = true;
-int oldMin=0;                 //ultimo minuto stampato 
-time_t oldDataSaved;
+static int oldMin=0;                 //ultimo minuto stampato 
+static time_t oldDataSaved;
 
 //COSTRUTTORI
 UTFT myGLCD(TFT01_32,38,39,40,41); 	//Display TFT
@@ -165,7 +164,7 @@ SunLight mySun; // Declaration of the object
 // timeArray[ Rise_hours, Rise_minutes, Set_hours, Set_minutes ]
 // if you want you can use specially created index:
 // SUNRISE_H SUNRISE_M SUNSET_H SUNSET_M
-uint8_t timeArray[4];
+static uint8_t timeArray[4];
 
 
 void setup()
@@ -223,7 +222,10 @@ void setup()
   dht.setup(45);
 
   radio.begin();
-  network.begin(/*channel*/ 10, /*node address*/ MY_ADDRESS);
+  radio.setDataRate(RF24_250KBPS);
+  radio.setPALevel(RF24_PA_HIGH);
+  network.begin(/*channel*/ 125, /*node address*/ MY_ADDRESS);
+
 
   oldDataSaved = now();
   oldDataSaved-=3600;
@@ -235,7 +237,7 @@ void setup()
   //regolo ora da internet
   //regolaOraFromNtp(); 
 
-  attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
+  attachInterrupt(5, wakeUpNowButton, RISING); // use interrupt 5 (pin 18) and run function
   // buttonPressed when pin 5 goes from low to high 
   //attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
   // wakeUpNow when pin 4 goes from low to high
@@ -266,15 +268,23 @@ void loop()
       checkDataOra();
       touchInterface();         //eseguo interfaccia touch
       flashPrevision();
-      if((inattivita == STANBY_CYCLE) & (schermata!=1) )    //dopo 3000 di inattivita se sono su una schermata diversa dalla principale
-        printMain();
-      else if(inattivita == STANBY_CYCLE*2)              //dopo 5000 di inattivita
-      {
-        backlightOff();                    //spengo retroilluminazione 
-        myGLCD.lcdOff();                   //metto in stand-By lo schermo
-        lcdActive=false;
-        sleepNow();
+      if(millis() > prevMSecInat) {
+        if ( ((millis()/1000 - prevMSecInat) >= STANBY_SEC) & (schermata!=1)) {
+          printMain();
+        }
+        else if ((millis()/1000 - prevMSecInat) >= STANBY_SEC*2) {
+          backlightOff();                    //spengo retroilluminazione 
+          myGLCD.lcdOff();                   //metto in stand-By lo schermo
+          lcdActive=false;
+          //sleepNow();
+        }
       }
+//      if((inattivita==STANBY_SEC) & (schermata!=1) )    //dopo 3000 di inattivita se sono su una schermata diversa dalla principale
+//        
+//      else if(inattivita==(STANBY_SEC*2))              //dopo 5000 di inattivita
+//      {
+//        
+//      }
       //delay(10);
     }
     else {
@@ -282,8 +292,9 @@ void loop()
           //Serial.println("Dati disp");
           //wakeCount=0;
           aggiornaDati();
+          //delay(100);
         }
-        sleepNow();
+        //sleepNow();
     }
   }
 }
@@ -373,7 +384,7 @@ void sleepNow()         // here we put the arduino to sleep
   //detachInterrupt(4);      // disables interrupt 4 on pin 19 so the 
   // wakeUpNow code will not be executed 
   // during normal running time.
-  attachInterrupt(5, buttonPressed, RISING); // use interrupt 5 (pin 18) and run function
+  attachInterrupt(5, wakeUpNowButton, RISING); // use interrupt 5 (pin 18) and run function
   // buttonPressed when pin 5 goes from low to high 
   //attachInterrupt(4, wifiInterrupt, RISING); // use interrupt 4 (pin 19) and run function
   // wakeUpNow when pin 4 goes from low to high 
@@ -387,13 +398,13 @@ void buttonPressed() {
   if(lcdActive){
     if(schermata!=1) 
     { 
-      inattivita=0;
+      prevMSecInat = millis()/1000;
       printMain();
     }
   }
   else
   {
-    inattivita=0;
+    prevMSecInat = millis()/1000;
     myGLCD.lcdOn();
     lcdActive=true;
     backlightOn();

@@ -348,7 +348,7 @@ void printSituazioneEsterna() {
   printImageMeteo(1,currPress);
   printImageMeteo(2,pressione[2]);
 
-  attachInterrupt(5, buttonPressed, RISING);
+  attachInterrupt(5, wakeUpNowButton, RISING);
   //FINE DATI
 }
 
@@ -555,8 +555,7 @@ void printImageMeteo(uint8_t colonna, float pressione) // '0' = -1h, '1' = ora, 
 } 
 
 void printDataOra(boolean ristampa) {
-  uint8_t giorno, mese, ore, minuti;
-  uint16_t anno;
+  uint8_t minuti;
   minuti = minute();
   if(ristampa|oldMin!=minute()) {
     //stampa data ora utlima riga

@@ -1,4 +1,4 @@
-struct payload_Meteo
+struct Payload_Meteo
 {
   time_t time;
   float inTemp;
@@ -6,16 +6,30 @@ struct payload_Meteo
   float outTemp;
   float outHum;
   float outPress;
+  
+  //costuttore
+  Payload_Meteo(time_t _t, float _in_t = 0, float _in_h = 0, float _out_t = 0, float _out_h = 0, float _out_p = 0): 
+                time(_t), inTemp(_in_t), inHum(_in_h), outTemp(_out_t), outHum(_out_h), outPress(_out_p) {}
+  /**
+   * Create debugging string
+   * @return String representation of this object
+   */
+  const char* toString(void) const;
 };
 
 
-struct payload_Sensor_1
+struct Payload_Sensor_1
 {
   float temp;
   float hum;
   float pres;
   float tempOfBmp;
   int battery_level; 
+  /**
+   * Create debugging string
+   * @return String representation of this object
+   */
+  //const char* toString(void) const;
 };
 
 //
@@ -52,12 +66,12 @@ void invioDati() {
   errorNetConnection = 0;  
   Serial.print("Sending...");
   //t=rtc.getTime();
-  payload_Meteo payload = { now(), (isnan(currInTemp))?0:currInTemp, (isnan(currInHum))?0:currInHum, 
-                                (isnan(currTemp))?0:currTemp, (isnan(currHum))?0:currHum, (isnan(currPress))?0:currPress};
+  Payload_Meteo payload( now(), (isnan(currInTemp))?0:currInTemp, (isnan(currInHum))?0:currInHum, 
+                                (isnan(currTemp))?0:currTemp, (isnan(currHum))?0:currHum, (isnan(currPress))?0:currPress);
   Serial.print(payload.outPress,2);
   RF24NetworkHeader header(/*to node*/ MASTER_ADDRESS);
   errorNetConnection = !network.write(header,&payload,sizeof(payload));
-  attachInterrupt(5, buttonPressed, RISING);
+  attachInterrupt(5, wakeUpNowButton, RISING);
   if(errorNetConnection)
   Serial.println("Errore Network");
 }
@@ -275,18 +289,28 @@ void checkDataOra() {
  */
 void recuperaDati() {
   Serial.println("aggiorno dati esterni");
-  if (network.available()) {
+  RF24NetworkHeader header;
+  //if(header.from_node==((uint16_t)"01")) {
     detachInterrupt(5);
-    RF24NetworkHeader header;
-    payload_Sensor_1 payload;
+    Payload_Sensor_1 payload;
     network.read(header,&payload,sizeof(payload));
+    Serial.print("payload: t:");
+    Serial.print(payload.temp);
+    Serial.print(" h:");
+    Serial.print(payload.hum);
+    Serial.print(" p:");
+    Serial.print(payload.pres);
+    Serial.print(" tp:");
+    Serial.println(payload.tempOfBmp);
+    Serial.print(" bat:");
+    Serial.println(payload.battery_level); 
     currPress=sealevel(payload.pres,altitudine);
     if(isnan(currTemp))
       currTemp=payload.tempOfBmp;
     else
       currTemp=payload.temp;
     currHum= payload.hum;
-    attachInterrupt(5, buttonPressed, RISING);
+    attachInterrupt(5, wakeUpNowButton, RISING);
     //rendo reattiva la grafica
     touchInterface();
     //if(!lcdActive);
@@ -297,7 +321,7 @@ void recuperaDati() {
       storeData();
       oldDataSaved=now();
     }
-  }
+  //}
 }
 
 
@@ -318,7 +342,7 @@ void touchInterface()
   if (myTouch.dataAvailable())
   {
     int x,y;           //coordinate touchscreen
-    inattivita=0;
+    prevMSecInat = millis()/1000;
     myTouch.read();
     x=myTouch.getX();
     y=myTouch.getY();
@@ -398,8 +422,8 @@ void touchInterface()
       break;
     }
   }
-  else
-    inattivita++;
+  else {
+  }
 }
 
 /* descrizione: funzione che salva sulla memoria EEPROM il valore dell'altitudine
@@ -468,7 +492,8 @@ void calcolaOrariSole() {
   mySun.setPosition(MY_LATITUDE, MY_LONGITUDE);
   
   // This is the function that allows you to calculate sunrise and sunset
-  boolean check = mySun.computeSR(timeArray, TWILIGHT_MINUTES, day(), month(), anno);
+  uint8_t twilight = TWILIGHT_MINUTES;
+  boolean check = mySun.computeSR(timeArray, twilight, day(), month(), anno);
   //return true if all the data entered are correct
   
   if( !check == true )
